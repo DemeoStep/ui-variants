@@ -1,0 +1,18 @@
+# Временное приложение-пикер вариантов UI. Создаётся модом ui-variants.
+name: ui_variants_host
+description: "Окно-пикер вариантов UI для {{PACKAGE}}"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: {{SDK}}
+
+dependencies:
+  flutter:
+    sdk: flutter
+  {{PACKAGE}}:
+    path: {{PROJECT_ROOT}}
+{{DEVICE_FRAME}}
+
+flutter:
+  uses-material-design: true

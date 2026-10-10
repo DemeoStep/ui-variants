@@ -1,0 +1,8 @@
+{
+  "name": "ui-variants",
+  "version": "0.3.1",
+  "description": "Окно-пикер вариантов UI для Flutter-проектов на macOS: варианты во временном приложении, выбор возвращается в сессию",
+  "author": {
+    "name": "Oleksii Horiainov"
+  }
+}

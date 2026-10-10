@@ -1,0 +1,3 @@
+.DS_Store
+# Типы, которые Claude Code кладёт рядом с модом при загрузке из папки.
+.claude-plugin/types/
