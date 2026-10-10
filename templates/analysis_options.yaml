@@ -1,4 +1,4 @@
-# Анализ временного приложения-пикера: без сторонних наборов правил.
+# Analysis of the temporary picker app: no third-party rule sets.
 analyzer:
   exclude:
     - build/**

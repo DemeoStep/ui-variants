@@ -1,21 +1,21 @@
-// Тема предпросмотра вариантов. Claude правит этот файл при первом показе в
-// проекте: подключает тему приложения, импортируя её из package:<имя>/...
-// Имена ниже использует main.dart, их не переименовывать.
+// Theme of the variant previews. Claude edits this file on the first show in a
+// project: wires in the app's theme by importing it from package:<name>/...
+// main.dart uses the names below; do not rename them.
 import 'package:flutter/material.dart';
 
-/// Светлая тема предпросмотра. По умолчанию стандартная Material 3.
+/// Light preview theme. The standard Material 3 theme by default.
 ThemeData previewTheme() => ThemeData(useMaterial3: true);
 
-/// Тёмная тема предпросмотра.
+/// Dark preview theme.
 ThemeData previewDarkTheme() =>
     ThemeData(useMaterial3: true, brightness: Brightness.dark);
 
-/// Делегаты локализации (например, AppLocalizations.localizationsDelegates).
+/// Localization delegates (AppLocalizations.localizationsDelegates, for example).
 List<LocalizationsDelegate<dynamic>> get previewLocalizationsDelegates =>
     const <LocalizationsDelegate<dynamic>>[];
 
-/// Поддерживаемые локали предпросмотра.
+/// Supported preview locales.
 List<Locale> get previewSupportedLocales => const <Locale>[Locale('en', 'US')];
 
-/// Обёртка вокруг каждого варианта: провайдеры состояния, зависимости проекта.
+/// A wrapper around every variant: state providers, project dependencies.
 Widget wrapPreview(BuildContext context, Widget child) => child;

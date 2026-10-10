@@ -1,13 +1,13 @@
-// Связь с нативным окном macOS: поднять окно поверх остальных.
+// Talks to the native macOS window: raises it above other windows.
 import 'package:flutter/services.dart';
 
 const MethodChannel _channel = MethodChannel('ui_variants/window');
 
-/// Поднимает окно-пикер поверх остальных окон (после запуска и hot restart).
+/// Raises the picker window above other windows (after launch and hot restart).
 Future<void> bringWindowToFront() async {
   try {
     await _channel.invokeMethod<void>('activate');
   } on Object {
-    // Нативная часть недоступна (например, в тестах): окно просто не поднимается.
+    // The native side is unavailable (in tests, for example): the window just stays where it is.
   }
 }

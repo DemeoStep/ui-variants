@@ -1,9 +1,10 @@
-// Решение пользователя: выбранный вариант и комментарии. Пишется атомарно в
-// <.state>/decision.json, откуда мод ui-variants передаёт выбор Claude.
+// The user's decision: the chosen variants, notes and revisions. Written
+// atomically to <.state>/decision.json, from where the ui-variants mod passes
+// it to Claude.
 import 'dart:convert';
 import 'dart:io';
 
-/// Комментарий к варианту или к его элементу.
+/// A note on a variant or one of its elements.
 class Note {
   Note({
     required this.variantId,
@@ -14,11 +15,11 @@ class Note {
 
   final String variantId;
 
-  /// Элемент варианта, например «кнопка входа»; пусто — вариант целиком.
+  /// An element of the variant, for example "sign-in button"; empty for the whole variant.
   final String target;
   final String text;
 
-  /// Время в ISO 8601.
+  /// The time in ISO 8601.
   final String at;
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -41,7 +42,7 @@ class Note {
   }
 }
 
-/// Правка варианта из окна: уходит Claude сразу, не дожидаясь выбора.
+/// A variant revision from the window: it goes to Claude at once, without waiting for a choice.
 class Request {
   Request({
     required this.id,
@@ -56,11 +57,11 @@ class Request {
   final String variantId;
   final String title;
 
-  /// Элемент варианта, например «кнопка входа»; пусто — вариант целиком.
+  /// An element of the variant, for example "sign-in button"; empty for the whole variant.
   final String target;
   final String text;
 
-  /// Время в ISO 8601.
+  /// The time in ISO 8601.
   final String at;
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -88,7 +89,7 @@ class Request {
   }
 }
 
-/// Выбор в одном вопросе (группе) показа.
+/// The choice in one question (group) of a show.
 class Choice {
   Choice({required this.group, required this.variantId, required this.title});
 
@@ -114,7 +115,7 @@ class Choice {
   }
 }
 
-/// Решение по текущему показу вариантов.
+/// The decision on the current show of variants.
 class Decision {
   Decision({
     required this.round,
@@ -130,28 +131,28 @@ class Decision {
         notes = notes ?? <Note>[],
         requests = requests ?? <Request>[];
 
-  /// Показ вариантов: новый показ — новое значение. По нему мод отличает
-  /// повторное нажатие «Выбрать» от нового выбора.
+  /// The show of variants: a new show gets a new value. The mod uses it to tell a
+  /// repeated press of Choose from a new choice.
   final String round;
 
-  /// Фича показа.
+  /// The feature of the show.
   String feature;
 
-  /// Id вариантов показа: по ним окно узнаёт, что решение относится к нему.
+  /// The variant ids of the show: the window uses them to know the decision is its own.
   final List<String> variantIds;
 
-  /// Id выбранного варианта или null, пока ничего не выбрано.
+  /// The chosen variant id, or null until something is chosen.
   String? chosen;
   String? chosenTitle;
 
-  /// Время отправки выбора: каждая отправка даёт новое значение.
+  /// When the choice was sent: every send gets a new value.
   String? chosenAt;
 
-  /// Выбор в каждом вопросе. Пока [chosen] пуст, это отметки до отправки.
+  /// The choice in each question. While [chosen] is empty, these are marks before sending.
   final List<Choice> choices;
   final List<Note> notes;
 
-  /// Правки вариантов, отправленные из окна в этом показе.
+  /// Variant revisions sent from the window in this show.
   final List<Request> requests;
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -195,8 +196,8 @@ class Decision {
   }
 }
 
-/// Ответ мода на выбор: `sent` — отправлен в сессию Claude, `duplicate` —
-/// такой выбор уже отправлялся.
+/// The mod's answer to a choice: `sent` means it went to the Claude session,
+/// `duplicate` means the same choice was sent before.
 class Ack {
   Ack({required this.chosenAt, required this.status});
 
@@ -204,18 +205,18 @@ class Ack {
   final String status;
 }
 
-/// Файл decision.json в папке .state временного приложения.
+/// The decision.json file in the temporary app's .state folder.
 class DecisionFile {
   DecisionFile(this.stateDir);
 
   final String stateDir;
 
-  /// Путь к .state передан при запуске (--dart-define=UI_VARIANTS_STATE=...).
+  /// The .state path was passed at launch (--dart-define=UI_VARIANTS_STATE=...).
   bool get isAvailable => stateDir.isNotEmpty;
 
   File get _file => File('$stateDir/decision.json');
 
-  /// Сохранённое решение или null, если файла нет или он повреждён.
+  /// The saved decision, or null if the file is missing or broken.
   Decision? read() {
     if (!isAvailable) return null;
     try {
@@ -226,7 +227,7 @@ class DecisionFile {
     }
   }
 
-  /// Ответ мода из ack.json или null.
+  /// The mod's answer from ack.json, or null.
   Ack? readAck() {
     if (!isAvailable) return null;
     try {
@@ -243,7 +244,7 @@ class DecisionFile {
     }
   }
 
-  /// Id правок, которые мод уже отправил Claude (requests-ack.json).
+  /// Ids of the revisions the mod has already sent to Claude (requests-ack.json).
   Set<String> readSentRequests() {
     if (!isAvailable) return <String>{};
     try {
@@ -257,8 +258,8 @@ class DecisionFile {
     }
   }
 
-  /// Время последней метки жизни сессии Claude (heartbeat.json) или null,
-  /// если меток нет (например, окно запущено вручную).
+  /// The time of the Claude session's last liveness mark (heartbeat.json), or
+  /// null if there are none (the window was started by hand, for example).
   DateTime? readHeartbeat() {
     if (!isAvailable) return null;
     try {
@@ -274,7 +275,7 @@ class DecisionFile {
     }
   }
 
-  /// Настройки вида окна (устройство, поворот, тема) из view.json или пустые.
+  /// The window view settings (device, rotation, theme) from view.json, or empty.
   Map<String, Object?> readView() {
     if (!isAvailable) return <String, Object?>{};
     try {
@@ -287,18 +288,18 @@ class DecisionFile {
     }
   }
 
-  /// Сохраняет настройки вида окна; ошибки записи не мешают работе окна.
+  /// Saves the window view settings; write errors do not affect the window.
   void writeView(Map<String, Object?> view) {
     if (!isAvailable) return;
     try {
       Directory(stateDir).createSync(recursive: true);
       File('$stateDir/view.json').writeAsStringSync(jsonEncode(view));
     } on Object {
-      // Настройки вида не важны для выбора.
+      // View settings do not matter for the choice.
     }
   }
 
-  /// Атомарная запись: временный файл, затем переименование.
+  /// Atomic write: a temporary file, then a rename.
   void write(Decision decision) {
     Directory(stateDir).createSync(recursive: true);
     final temp = File('$stateDir/decision.json.$pid.tmp');

@@ -1,9 +1,9 @@
-// Встроенные упрощённые рамки устройств без внешних пакетов. Мод ставит этот
-// файл вместо lib/_host/frames.dart, если device_frame не совместим с
-// зависимостями проекта. Интерфейс тот же.
+// Built-in simplified device frames without external packages. The mod puts this
+// file in place of lib/_host/frames.dart if device_frame is incompatible with the
+// project's dependencies. The interface is the same.
 import 'package:flutter/material.dart';
 
-/// Устройство в списке выбора.
+/// A device in the picker list.
 class PreviewDevice {
   const PreviewDevice({
     required this.id,
@@ -18,7 +18,7 @@ class PreviewDevice {
   final TargetPlatform platform;
 }
 
-/// Рамки встроенные упрощённые, а не реалистичные (device_frame).
+/// The frames are built-in and simplified, not realistic (device_frame).
 const bool hasRealFrames = false;
 
 class _Spec {
@@ -37,7 +37,7 @@ class _Spec {
 PreviewDevice _iphone(String id, String name) => PreviewDevice(
     id: 'builtin/$id', name: name, isTablet: false, platform: TargetPlatform.iOS);
 
-/// Размеры и безопасные зоны iPhone — по useyourloaf.com.
+/// iPhone sizes and safe areas are from useyourloaf.com.
 final List<_Spec> _specs = <_Spec>[
   _Spec(_iphone('iphone_17', 'iPhone 17'), const Size(402, 874), 62, 34, 56,
       hasIsland: true),
@@ -71,14 +71,14 @@ final List<_Spec> _specs = <_Spec>[
       18),
 ];
 
-/// Устройства встроенного набора.
+/// The built-in devices.
 List<PreviewDevice> previewDevices() =>
     <PreviewDevice>[for (final spec in _specs) spec.device];
 
-/// Устройство по умолчанию.
+/// The default device.
 String defaultDeviceId() => _specs.first.device.id;
 
-/// [screen] в упрощённой рамке; рамка вписывается в доступное место.
+/// [screen] in a simplified frame; the frame fits the available space.
 Widget deviceFrame({
   required String deviceId,
   required bool isLandscape,

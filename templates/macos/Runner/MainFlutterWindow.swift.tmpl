@@ -1,14 +1,14 @@
 import Cocoa
 import FlutterMacOS
 
-// Окно-пикер вариантов UI. Файл создаётся модом ui-variants.
+// UI variants picker window. Created by the ui-variants mod.
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
     self.contentViewController = flutterViewController
-    self.title = "Варианты UI — {{PACKAGE}}"
+    self.title = "UI Variants — {{PACKAGE}}"
     self.minSize = NSSize(width: 900, height: 600)
-    // Размер и место окна запоминаются между запусками.
+    // The window size and position are remembered between launches.
     if !self.setFrameUsingName("UIVariantsPicker") {
       self.setContentSize(NSSize(width: 1280, height: 860))
       self.center()
@@ -17,7 +17,7 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
-    // Dart просит поднять окно после запуска и после hot restart.
+    // Dart asks to raise the window after launch and after a hot restart.
     let channel = FlutterMethodChannel(
       name: "ui_variants/window",
       binaryMessenger: flutterViewController.engine.binaryMessenger)

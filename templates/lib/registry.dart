@@ -1,10 +1,10 @@
-// Реестр вариантов окна-пикера. Его правит Claude: импортирует варианты из
-// variants/ и перечисляет здесь только варианты текущего показа.
+// The picker's variant registry. Claude edits it: imports variants from
+// variants/ and lists only the variants of the current show here.
 import '_host/variant.dart';
 
 // import 'variants/login_compact.dart';
 
-/// Варианты текущего показа в порядке списка.
+/// The variants of the current show, in display order.
 final List<Variant> variants = <Variant>[
   // const LoginCompact(),
 ];

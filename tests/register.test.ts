@@ -1,5 +1,5 @@
-// Тесты мода ui-variants: файловая система, процессы, хранилище и часы —
-// заглушки в памяти, мод загружен движком из папки плагина.
+// Tests of the ui-variants mod: the file system, processes, store and clock are
+// in-memory stubs; the engine loads the mod from the plugin folder.
 import { expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
@@ -10,7 +10,7 @@ const CACHE = `${HOME}/Library/Caches/ui-variants/`
 
 const FLUTTER_PUBSPEC = [
   'name: demo_app',
-  'description: Демо',
+  'description: Demo',
   'environment:',
   "  sdk: '>=3.4.0 <4.0.0'",
   '',
@@ -24,26 +24,26 @@ const FLUTTER_PUBSPEC = [
 const DART_PUBSPEC = 'name: cli_tool\nenvironment:\n  sdk: ^3.5.0\ndependencies:\n  args: ^2.0.0\n'
 
 const SKILL_TEXT = [
-  'Покажи варианты для: ARGS',
-  'Варианты: {{VARIANTS_DIR}}',
-  'Реестр: {{REGISTRY}}',
-  'Тема: {{THEME}}',
-  'Решение: {{DECISION}}',
-  'Пакет: package:{{PACKAGE}}/',
-  'Проверка: {{APP_DIR}}',
+  'Show variants for: ARGS',
+  'Variants: {{VARIANTS_DIR}}',
+  'Registry: {{REGISTRY}}',
+  'Theme: {{THEME}}',
+  'Decision: {{DECISION}}',
+  'Package: package:{{PACKAGE}}/',
+  'Check: {{APP_DIR}}',
 ].join('\n')
 
 const TEMPLATES: Record<string, string> = {
   'pubspec.yaml.tmpl':
     'name: ui_variants_host\nenvironment:\n  sdk: {{SDK}}\ndependencies:\n  flutter:\n    sdk: flutter\n  {{PACKAGE}}:\n    path: {{PROJECT_ROOT}}\n{{DEVICE_FRAME}}\n',
-  'lib/_host/frames.dart': '// рамки device_frame',
-  'fallback/frames.dart': '// встроенные рамки',
+  'lib/_host/frames.dart': '// device_frame frames',
+  'fallback/frames.dart': '// built-in frames',
   'analysis_options.yaml': 'analyzer:\n',
-  'lib/main.dart': '// окно-пикер',
-  'lib/registry.dart': '// реестр по умолчанию',
-  'lib/theme.dart': '// тема по умолчанию',
+  'lib/main.dart': '// picker window',
+  'lib/registry.dart': '// default registry',
+  'lib/theme.dart': '// default theme',
   'lib/_host/version.dart.tmpl': "const String hostTemplateVersion = '{{VERSION}}';",
-  'macos/Runner/MainFlutterWindow.swift.tmpl': 'title = "Варианты UI — {{PACKAGE}}"',
+  'macos/Runner/MainFlutterWindow.swift.tmpl': 'title = "UI Variants — {{PACKAGE}}"',
 }
 
 const SANDBOXED = '<dict>\n\t<key>com.apple.security.app-sandbox</key>\n\t<true/>\n</dict>'
@@ -191,7 +191,7 @@ function setup(on: On, options: { pubspec?: string; store?: Record<string, unkno
       return world.alive.has(Number(argv[2])) ? ok(command) : fail()
     }
     if (argv[0] === '/bin/sh' && argv[2].includes('UIV_PIDS')) {
-      // Быстрое закрытие окна: сигнал живым flutter run и pkill приложения.
+      // Quick window close: a signal to live flutter run processes and pkill of the app.
       let found = 0
       for (const pid of (e.init?.env?.UIV_PIDS ?? '').split(' ').filter(Boolean).map(Number)) {
         if (!world.alive.has(pid)) continue
@@ -237,7 +237,7 @@ function setup(on: On, options: { pubspec?: string; store?: Record<string, unkno
   return world
 }
 
-const TURN = { answer: 'Готово', durationMs: 10, isAborted: false, turnId: 't1', reason: 'answer' as const }
+const TURN = { answer: 'Done', durationMs: 10, isAborted: false, turnId: 't1', reason: 'answer' as const }
 
 function expectNothingInProject(world: World) {
   for (const path of world.writes) expect(path.startsWith(`${PROJECT}/`)).toBe(false)
@@ -250,7 +250,7 @@ function expectNothingInProject(world: World) {
   }
 }
 
-test('до загрузки скилла хуки ничего не делают', async ($, on) => {
+test('hooks do nothing before the skill is loaded', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.session.start({ cwd: PROJECT, surface: 'terminal', isInteractive: true })
@@ -258,7 +258,7 @@ test('до загрузки скилла хуки ничего не делают
   await $.tool.call({ tool: 'Edit', file_path: `${PROJECT}/lib/main.dart`, old_string: 'a', new_string: 'b' })
   await $.turn.complete(TURN)
   await clock.advance(10_000)
-  await $.skill.prompt({ skill: 'other-skill', text: 'Покажи варианты для: x' })
+  await $.skill.prompt({ skill: 'other-skill', text: 'Show variants for: x' })
   expect(world.writes).toEqual([])
   expect(world.runs).toEqual([])
   expect(world.spawns).toEqual([])
@@ -266,36 +266,36 @@ test('до загрузки скилла хуки ничего не делают
   expect(world.prompts).toEqual([])
 })
 
-test('в не-Flutter проекте скилл возвращает короткий отказ', async ($, on) => {
+test('in a non-Flutter project the skill returns a short refusal', async ($, on) => {
   const world = setup(on, { pubspec: DART_PUBSPEC })
   mock.clock(on)
   const answer = await $.skill.prompt({ skill: 'ui-variants:ui-variants', text: SKILL_TEXT })
-  expect(answer.text).toBe('Это не Flutter-проект, окно-пикер здесь не работает. Опиши варианты текстом.')
+  expect(answer.text).toBe('This is not a Flutter project, so the picker window is not available here. Describe the variants in text.')
   expect(world.writes).toEqual([])
   expect(world.runs).toEqual([])
 })
 
-test('без pubspec.yaml скилл тоже отказывает', async ($, on) => {
+test('without pubspec.yaml the skill refuses too', async ($, on) => {
   const world = setup(on)
   mock.clock(on)
   const answer = await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
-  expect(answer.text).toMatch(/^Это не Flutter-проект/)
+  expect(answer.text).toMatch(/^This is not a Flutter project/)
   expect(world.writes).toEqual([])
 })
 
-test('загрузка скилла создаёт приложение-пикер и подставляет пути', async ($, on) => {
+test('loading the skill creates the picker app and fills in the paths', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   mock.clock(on, { now: 1_700_000_000_000 })
-  const answer = await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT.replace('ARGS', 'экран входа') })
+  const answer = await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT.replace('ARGS', 'sign-in screen') })
   const appDir = world.appDir()
   expect(appDir).toBeDefined()
   expect(appDir).toMatch(/\/Library\/Caches\/ui-variants\/demo_app-[0-9a-f]{8}$/)
-  expect(answer.text).toContain('Покажи варианты для: экран входа')
-  expect(answer.text).toContain(`Варианты: ${appDir}/lib/variants`)
-  expect(answer.text).toContain(`Реестр: ${appDir}/lib/registry.dart`)
-  expect(answer.text).toContain(`Тема: ${appDir}/lib/theme.dart`)
-  expect(answer.text).toContain(`Решение: ${appDir}/.state/decision.json`)
-  expect(answer.text).toContain('Пакет: package:demo_app/')
+  expect(answer.text).toContain('Show variants for: sign-in screen')
+  expect(answer.text).toContain(`Variants: ${appDir}/lib/variants`)
+  expect(answer.text).toContain(`Registry: ${appDir}/lib/registry.dart`)
+  expect(answer.text).toContain(`Theme: ${appDir}/lib/theme.dart`)
+  expect(answer.text).toContain(`Decision: ${appDir}/.state/decision.json`)
+  expect(answer.text).toContain('Package: package:demo_app/')
   expect(answer.text).not.toContain('{{')
   const create = world.runs.find(run => run.argv[1] === 'create')
   expect(create?.argv).toEqual([FLUTTER, 'create', '--platforms=macos', '--project-name', 'ui_variants_host',
@@ -303,7 +303,7 @@ test('загрузка скилла создаёт приложение-пике
   const pubspec = world.files.get(`${appDir}/pubspec.yaml`)?.text ?? ''
   expect(pubspec).toContain("path: '/work/demo_app'")
   expect(pubspec).toContain("sdk: '>=3.4.0 <4.0.0'")
-  expect(world.files.get(`${appDir}/lib/main.dart`)?.text).toBe('// окно-пикер')
+  expect(world.files.get(`${appDir}/lib/main.dart`)?.text).toBe('// picker window')
   expect(world.files.get(`${appDir}/lib/_host/version.dart`)?.text).toContain("'0.1.0'")
   expect(world.files.get(`${appDir}/macos/Runner/MainFlutterWindow.swift`)?.text).toContain('demo_app')
   expect(world.files.get(`${appDir}/macos/Runner/DebugProfile.entitlements`)?.text).toContain('<false/>')
@@ -314,42 +314,42 @@ test('загрузка скилла создаёт приложение-пике
   expectNothingInProject(world)
 })
 
-test('обновление шаблонов не трогает реестр, тему и варианты', async ($, on) => {
+test('a template update leaves the registry, theme and variants alone', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   mock.clock(on)
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   const appDir = world.appDir() ?? ''
-  world.write(`${appDir}/lib/registry.dart`, '// реестр Claude')
-  world.write(`${appDir}/lib/theme.dart`, '// тема проекта')
+  world.write(`${appDir}/lib/registry.dart`, '// registry by Claude')
+  world.write(`${appDir}/lib/theme.dart`, '// project theme')
   world.files.delete(`${appDir}/lib/_host/version.dart`)
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
-  expect(world.files.get(`${appDir}/lib/registry.dart`)?.text).toBe('// реестр Claude')
-  expect(world.files.get(`${appDir}/lib/theme.dart`)?.text).toBe('// тема проекта')
+  expect(world.files.get(`${appDir}/lib/registry.dart`)?.text).toBe('// registry by Claude')
+  expect(world.files.get(`${appDir}/lib/theme.dart`)?.text).toBe('// project theme')
   expect(world.files.get(`${appDir}/lib/_host/version.dart`)?.text).toContain('0.1.0')
   expect(world.runs.filter(run => run.argv[1] === 'create').length).toBe(1)
 })
 
-test('сбой pub get добавляет причину и просьбу описать варианты текстом', async ($, on) => {
+test('a pub get failure adds the reason and asks to describe variants in text', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   mock.clock(on)
   world.failPubGet = true
   const answer = await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
-  expect(answer.text).toContain('окно-пикер сейчас недоступно')
+  expect(answer.text).toContain('picker window is not available right now')
   expect(answer.text).toContain('version solving failed')
-  expect(answer.text).toContain('опиши варианты текстом')
-  // Мод не активировался: запись реестра не открывает окно.
+  expect(answer.text).toContain('describe the variants in text')
+  // The mod did not activate: writing the registry does not open the window.
   await $.tool.call({ tool: 'Write', file_path: `${world.appDir()}/lib/registry.dart`, content: '' })
   await $.turn.complete(TURN)
   expect(world.spawns).toEqual([])
 })
 
-test('запись в registry.dart и конец хода открывают окно, следующий раз — hot restart', async ($, on) => {
+test('a registry.dart write and the turn end open the window; the next time it hot restarts', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   const appDir = world.appDir() ?? ''
 
-  // Запись не в пикер — окно не открывается.
+  // A write outside the picker does not open the window.
   await $.tool.call({ tool: 'Write', file_path: `${PROJECT}/lib/main.dart`, content: '' })
   await $.turn.complete(TURN)
   await clock.advance(100)
@@ -368,93 +368,93 @@ test('запись в registry.dart и конец хода открывают о
   expect(spawn.env?.UIV_STATE).toBe(`${appDir}/.state`)
   expect(spawn.env?.UIV_APP_BUNDLE).toBe(`${appDir}/build/macos/Build/Products/Debug/ui_variants_host.app`)
   expect(spawn.argv[2]).toContain('pkill -f "$UIV_APP_BUNDLE"')
-  expect(world.toasts).toContain('Окно с вариантами открывается…')
+  expect(world.toasts).toContain('Opening the variants window…')
 
-  // flutter run записал pid-файл: окно открыто.
+  // flutter run wrote the pid file: the window is open.
   world.write(`${appDir}/.state/flutter.pid`, '4242')
   await clock.advance(2000)
-  expect(world.toasts).toContain('Окно с вариантами открыто')
+  expect(world.toasts).toContain('Variants window is open')
 
-  // Новые варианты: горячий перезапуск того же процесса.
+  // New variants: a hot restart of the same process.
   await $.tool.call({ tool: 'Write', file_path: `${appDir}/lib/registry.dart`, content: '' })
   await $.turn.complete(TURN)
   await clock.advance(100)
   expect(world.signals).toContain('-USR2 4242')
   expect(world.spawns.length).toBe(1)
-  expect(world.toasts).toContain('Окно с вариантами обновлено')
+  expect(world.toasts).toContain('Variants window updated')
   expectNothingInProject(world)
 })
 
-test('новый выбор: toast и ровно один prompt.submit, повтор — ни одного', async ($, on) => {
+test('a new choice gives a toast and exactly one prompt.submit; a repeat gives none', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   const appDir = world.appDir() ?? ''
   const path = `${appDir}/.state/decision.json`
 
-  // Битый JSON — тик пропускается.
+  // Broken JSON: the tick is skipped.
   world.write(path, '{"chosen": ')
   await clock.advance(2000)
   expect(world.toasts).toEqual([])
 
-  // Комментарий без выбора — только toast.
-  const note = { variantId: 'login-a', target: 'кнопка входа', text: 'крупнее', at: '2026-10-10T10:00:00Z' }
-  world.write(path, JSON.stringify({ feature: 'Экран входа', chosen: null, notes: [note] }))
+  // A note without a choice: only a toast.
+  const note = { variantId: 'login-a', target: 'sign-in button', text: 'bigger', at: '2026-10-10T10:00:00Z' }
+  world.write(path, JSON.stringify({ feature: 'Sign-in screen', chosen: null, notes: [note] }))
   await clock.advance(2000)
   expect(world.toasts.length).toBe(1)
-  expect(world.toasts[0]).toContain('крупнее')
+  expect(world.toasts[0]).toContain('bigger')
   expect(world.prompts).toEqual([])
 
   const chosen = {
     round: 'round-1',
-    feature: 'Экран входа',
+    feature: 'Sign-in screen',
     chosen: 'login-b',
-    chosenTitle: 'Компактный',
+    chosenTitle: 'Compact',
     chosenAt: '2026-10-10T10:01:00Z',
     notes: [note],
   }
   world.write(path, JSON.stringify(chosen))
   await clock.advance(2000)
-  expect(world.toasts).toContain('Выбран вариант: Компактный')
+  expect(world.toasts).toContain('Chosen variant: Compact')
   expect(world.prompts.length).toBe(1)
-  expect(world.prompts[0]).toContain('Выбран вариант login-b для фичи «Экран входа»')
-  expect(world.prompts[0]).toContain('[login-a → кнопка входа] крупнее')
+  expect(world.prompts[0]).toContain('Chosen variant login-b for "Sign-in screen"')
+  expect(world.prompts[0]).toContain('[login-a → sign-in button] bigger')
   expect(world.prompts[0]).toContain(path)
-  expect(world.prompts[0]).toContain('Реализуй выбранный вариант в проекте')
-  // Окно получает подтверждение.
+  expect(world.prompts[0]).toContain('Implement the chosen variant in the project')
+  // The window gets an acknowledgement.
   const ack = JSON.parse(world.files.get(`${appDir}/.state/ack.json`)?.text ?? '{}')
   expect(ack).toMatchObject({ chosenAt: chosen.chosenAt, status: 'sent' })
 
-  // Тот же выбор, файл переписан — повтор не отправляется.
+  // The same choice with the file rewritten is not sent again.
   world.write(path, JSON.stringify(chosen))
   await clock.advance(6000)
-  // Повторное нажатие «Выбрать» на том же варианте без новых комментариев — тоже.
+  // Neither is pressing Choose again on the same variant without new notes.
   const again = { ...chosen, chosenAt: '2026-10-10T10:02:00Z' }
   world.write(path, JSON.stringify(again))
   await clock.advance(2000)
-  expect(world.toasts).toContain('Этот выбор уже отправлен')
+  expect(world.toasts).toContain('This choice was already sent')
   expect(JSON.parse(world.files.get(`${appDir}/.state/ack.json`)?.text ?? '{}'))
     .toMatchObject({ chosenAt: again.chosenAt, status: 'duplicate' })
-  // Повторная загрузка скилла в той же сессии — тоже нет.
+  // Reloading the skill in the same session does not send it either.
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   await clock.advance(4000)
   expect(world.prompts.length).toBe(1)
-  expect(world.toasts.filter(text => text.startsWith('Выбран вариант')).length).toBe(1)
+  expect(world.toasts.filter(text => text.startsWith('Chosen variant')).length).toBe(1)
 
-  // Новый комментарий и снова «Выбрать» — это новая информация, она отправляется.
-  const extra = { variantId: 'login-b', target: '', text: 'без тени', at: '2026-10-10T10:03:00Z' }
+  // A new note and Choose again carry new information, so they are sent.
+  const extra = { variantId: 'login-b', target: '', text: 'no shadow', at: '2026-10-10T10:03:00Z' }
   world.write(path, JSON.stringify({ ...chosen, chosenAt: '2026-10-10T10:03:01Z', notes: [note, extra] }))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(2)
-  expect(world.prompts[1]).toContain('без тени')
-  // Новый показ с тем же id варианта — тоже новый выбор.
+  expect(world.prompts[1]).toContain('no shadow')
+  // A new show with the same variant id is a new choice too.
   world.write(path, JSON.stringify({ ...chosen, round: 'round-2', chosenAt: '2026-10-10T11:00:00Z' }))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(3)
   expectNothingInProject(world)
 })
 
-test('close закрывает окно, clean удаляет приложение и выключает мод', async ($, on) => {
+test('close closes the window; clean deletes the app and deactivates the mod', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
@@ -467,15 +467,15 @@ test('close закрывает окно, clean удаляет приложени
 
   const closing = $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT.replace('ARGS', 'close') })
   await clock.advance(2000)
-  expect((await closing).text).toBe('Окно-пикер закрыто.')
+  expect((await closing).text).toBe('The picker window is closed.')
   expect(world.signals).toContain('-TERM 4242')
 
   const cleaning = $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT.replace('ARGS', 'clean') })
   await clock.advance(2000)
-  expect((await cleaning).text).toBe('Окно-пикер закрыто, временное приложение удалено.')
+  expect((await cleaning).text).toBe('The picker window is closed and the temporary app is deleted.')
   expect(world.appDir()).toBeUndefined()
 
-  // После clean мод неактивен.
+  // After clean the mod is inactive.
   await $.tool.call({ tool: 'Write', file_path: `${appDir}/lib/registry.dart`, content: '' })
   await $.turn.complete(TURN)
   await clock.advance(2000)
@@ -483,51 +483,51 @@ test('close закрывает окно, clean удаляет приложени
   expectNothingInProject(world)
 })
 
-test('после перезагрузки мода активность восстанавливается из $.store', async ($, on) => {
+test('after a mod reload activity is restored from $.store', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   const appDir = world.appDir() ?? ''
-  // session.start после reload: таймеры отменены, состояние модуля сброшено.
+  // session.start after a reload: timers cancelled, module state reset.
   await $.session.start({ cwd: PROJECT, surface: 'terminal', isInteractive: true })
   world.write(`${appDir}/.state/decision.json`, JSON.stringify({
-    feature: 'Экран входа',
+    feature: 'Sign-in screen',
     chosen: 'login-a',
-    chosenTitle: 'Карточка',
+    chosenTitle: 'Card',
     chosenAt: '2026-10-10T11:00:00Z',
     notes: [],
   }))
   await clock.advance(2000)
-  expect(world.toasts).toEqual(['Выбран вариант: Карточка'])
+  expect(world.toasts).toEqual(['Chosen variant: Card'])
   expect(world.prompts.length).toBe(1)
-  // Запись вариантов после восстановления снова открывает окно.
+  // Writing variants after the restore opens the window again.
   await $.tool.call({ tool: 'Write', file_path: `${appDir}/lib/registry.dart`, content: '' })
   await $.turn.complete(TURN)
   await clock.advance(100)
   expect(world.spawns.length).toBe(1)
 })
 
-test('варианты, записанные через Bash, тоже открывают окно; чтение через Bash — нет', async ($, on) => {
+test('variants written with Bash open the window too; reading with Bash does not', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   const appDir = world.appDir() ?? ''
 
-  // Только чтение и анализ: файлы пикера не изменились.
+  // Reading and analysis only: the picker files did not change.
   await $.tool.call({ tool: 'Bash', command: `flutter analyze ${appDir}/lib` })
   await $.turn.complete(TURN)
   await clock.advance(100)
   expect(world.spawns).toEqual([])
 
-  // Bash пишет варианты через переменную: путь целиком в команде не встречается.
-  world.write(`${appDir}/lib/variants/badge_a.dart`, '// вариант')
-  world.write(`${appDir}/lib/registry.dart`, '// реестр с badge_a')
+  // Bash writes variants through a variable: the full path is not in the command.
+  world.write(`${appDir}/lib/variants/badge_a.dart`, '// variant')
+  world.write(`${appDir}/lib/registry.dart`, '// registry with badge_a')
   await $.tool.call({ tool: 'Bash', command: 'D=/x; cat > "$D/lib/variants/badge_a.dart" <<EOF' })
   await $.turn.complete(TURN)
   await clock.advance(100)
   expect(world.spawns.length).toBe(1)
 
-  // Следующий ход без изменений — окно не трогается.
+  // The next turn without changes leaves the window alone.
   world.write(`${appDir}/.state/flutter.pid`, '4242')
   await clock.advance(2000)
   await $.turn.complete(TURN)
@@ -536,8 +536,8 @@ test('варианты, записанные через Bash, тоже откр�
   expectNothingInProject(world)
 })
 
-test('решение, сделанное до загрузки скилла, ход не запускает', async ($, on) => {
-  // Подпись отправки в старом формате (до версии 0.1.6): повторно не отправлять.
+test('a decision made before the skill loaded does not start a turn', async ($, on) => {
+  // A send signature in the old format (before 0.1.6): do not send again.
   const store = { 'submitted|/work/demo_app': 'r1|a|' }
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC, store })
   const now = 1_700_000_000_000
@@ -548,21 +548,21 @@ test('решение, сделанное до загрузки скилла, х�
   const path = `${appDir}/.state/decision.json`
   await $.session.end(clear)
 
-  // Выбор минуту назад, пока сессия не следила за окном.
-  const fresh = { round: 'r1', feature: 'Экран', chosen: 'a', chosenTitle: 'А', chosenAt: new Date(now - 60_000).toISOString(), notes: [] }
+  // A choice a minute ago, while no session watched the window.
+  const fresh = { round: 'r1', feature: 'Screen', chosen: 'a', chosenTitle: 'A', chosenAt: new Date(now - 60_000).toISOString(), notes: [] }
   world.write(path, JSON.stringify(fresh))
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   await clock.advance(6000)
   expect(world.prompts).toEqual([])
   expect(world.toasts).toEqual([])
 
-  // Новый выбор при открытой сессии отправляется как обычно.
+  // A new choice while the session is open is sent as usual.
   world.write(path, JSON.stringify({ ...fresh, chosen: 'b', chosenAt: new Date(now + 5000).toISOString() }))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(1)
 })
 
-test('конец сессии закрывает окно и flutter run', async ($, on) => {
+test('the session end closes the window and flutter run', async ($, on) => {
   const now = 1_700_000_000_000
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now })
@@ -583,7 +583,7 @@ test('конец сессии закрывает окно и flutter run', async
   expect(world.alive.has(4242)).toBe(false)
 })
 
-test('при другой живой сессии того же проекта окно остаётся открытым', async ($, on) => {
+test('the window stays open if another live session watches the project', async ($, on) => {
   const now = 1_700_000_000_000
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC, store: { 'alive|/work/demo_app|session-2': now } })
   const clock = mock.clock(on, { now })
@@ -600,7 +600,7 @@ test('при другой живой сессии того же проекта �
   expect(world.signals.some(signal => signal.startsWith('pkill'))).toBe(false)
 })
 
-test('после выбора окно закрывается, после комментария без выбора — нет', async ($, on) => {
+test('the window closes after a choice, not after a note without a choice', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
@@ -612,90 +612,90 @@ test('после выбора окно закрывается, после ком
   world.write(`${appDir}/.state/flutter.pid`, '4242')
   await clock.advance(2000)
 
-  const note = { variantId: 'a', target: '', text: 'ярче', at: '2026-10-10T10:00:00Z' }
-  world.write(path, JSON.stringify({ round: 'r1', feature: 'Экран', chosen: null, notes: [note] }))
+  const note = { variantId: 'a', target: '', text: 'brighter', at: '2026-10-10T10:00:00Z' }
+  world.write(path, JSON.stringify({ round: 'r1', feature: 'Screen', chosen: null, notes: [note] }))
   await clock.advance(6000)
   expect(world.alive.has(4242)).toBe(true)
 
-  world.write(path, JSON.stringify({ round: 'r1', feature: 'Экран', chosen: 'a', chosenTitle: 'А', chosenAt: '2026-10-10T10:01:00Z', notes: [note] }))
+  world.write(path, JSON.stringify({ round: 'r1', feature: 'Screen', chosen: 'a', chosenTitle: 'A', chosenAt: '2026-10-10T10:01:00Z', notes: [note] }))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(1)
-  // Окно ещё успевает показать подтверждение.
+  // The window still has time to show the acknowledgement.
   expect(world.alive.has(4242)).toBe(true)
   await clock.advance(3000)
   expect(world.signals).toContain('-TERM 4242')
   expect(world.alive.has(4242)).toBe(false)
 
-  // Новые варианты снова открывают окно.
+  // New variants open the window again.
   await $.tool.call({ tool: 'Write', file_path: `${appDir}/lib/registry.dart`, content: '' })
   await $.turn.complete(TURN)
   await clock.advance(100)
   expect(world.spawns.length).toBe(2)
 })
 
-test('несколько вопросов: одно сообщение со всеми выборами', async ($, on) => {
+test('several questions: one message with all the choices', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   const appDir = world.appDir() ?? ''
   const path = `${appDir}/.state/decision.json`
   const choices = [
-    { group: 'Раскладка', variantId: 'layout-cards', title: 'Карточки' },
-    { group: 'Цвета', variantId: 'color-warm', title: 'Тёплые' },
+    { group: 'Layout', variantId: 'layout-cards', title: 'Cards' },
+    { group: 'Colors', variantId: 'color-warm', title: 'Warm' },
   ]
-  // Отметки до отправки (chosen пуст) ход не запускают.
-  world.write(path, JSON.stringify({ round: 'r1', feature: 'Экран', chosen: null, choices: choices.slice(0, 1), notes: [] }))
+  // Marks before sending (chosen is empty) do not start a turn.
+  world.write(path, JSON.stringify({ round: 'r1', feature: 'Screen', chosen: null, choices: choices.slice(0, 1), notes: [] }))
   await clock.advance(4000)
   expect(world.prompts).toEqual([])
 
-  const sent = { round: 'r1', feature: 'Экран', chosen: 'layout-cards', chosenTitle: 'Карточки, Тёплые', chosenAt: '2026-10-10T10:00:00Z', choices, notes: [] }
+  const sent = { round: 'r1', feature: 'Screen', chosen: 'layout-cards', chosenTitle: 'Cards, Warm', chosenAt: '2026-10-10T10:00:00Z', choices, notes: [] }
   world.write(path, JSON.stringify(sent))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(1)
-  expect(world.prompts[0]).toContain('Выбраны варианты для фичи «Экран»: Раскладка — layout-cards; Цвета — color-warm.')
-  expect(world.prompts[0]).toContain('Реализуй выбранные варианты в проекте.')
-  expect(world.toasts).toContain('Выбраны варианты: Карточки, Тёплые')
+  expect(world.prompts[0]).toContain('Chosen variants for "Screen": Layout — layout-cards; Colors — color-warm.')
+  expect(world.prompts[0]).toContain('Implement the chosen variants in the project.')
+  expect(world.toasts).toContain('Chosen variants: Cards, Warm')
 
-  // Те же отметки ещё раз — не отправляются; другой цвет — новое сообщение.
+  // The same marks again are not sent; another color is a new message.
   world.write(path, JSON.stringify({ ...sent, chosenAt: '2026-10-10T10:01:00Z' }))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(1)
-  const other = [choices[0], { group: 'Цвета', variantId: 'color-cold', title: 'Холодные' }]
+  const other = [choices[0], { group: 'Colors', variantId: 'color-cold', title: 'Cold' }]
   world.write(path, JSON.stringify({ ...sent, chosenAt: '2026-10-10T10:02:00Z', choices: other }))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(2)
-  expect(world.prompts[1]).toContain('Цвета — color-cold')
+  expect(world.prompts[1]).toContain('Colors — color-cold')
 })
 
-test('рамки device_frame, а при конфликте версий — встроенные', async ($, on) => {
+test('device_frame frames, or built-in ones on a version conflict', async ($, on) => {
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   mock.clock(on)
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   const appDir = world.appDir() ?? ''
   expect(world.files.get(`${appDir}/pubspec.yaml`)?.text).toContain("device_frame: '>=1.2.0 <2.0.0'")
-  expect(world.files.get(`${appDir}/lib/_host/frames.dart`)?.text).toBe('// рамки device_frame')
+  expect(world.files.get(`${appDir}/lib/_host/frames.dart`)?.text).toBe('// device_frame frames')
   expect([...world.files.keys()].some(path => path.includes('/fallback/'))).toBe(false)
 
-  // pubspec проекта изменился и теперь конфликтует с device_frame.
+  // The project's pubspec changed and now conflicts with device_frame.
   world.failFrames = true
   world.write(`${PROJECT}/pubspec.yaml`, FLUTTER_PUBSPEC + '  freezed_annotation: ^2.4.0\n')
   const answer = await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
-  expect(answer.text).not.toContain('недоступно')
+  expect(answer.text).not.toContain('not available')
   expect(world.files.get(`${appDir}/pubspec.yaml`)?.text).not.toContain('device_frame')
-  expect(world.files.get(`${appDir}/lib/_host/frames.dart`)?.text).toBe('// встроенные рамки')
-  expect(world.files.get(`${appDir}/.state/mod.log`)?.text).toContain('device_frame не подошёл')
+  expect(world.files.get(`${appDir}/lib/_host/frames.dart`)?.text).toBe('// built-in frames')
+  expect(world.files.get(`${appDir}/.state/mod.log`)?.text).toContain('device_frame does not fit')
 })
 
-test('правка варианта сразу уходит Claude, окно не закрывается', async ($, on) => {
-  // Правка, лежавшая в файле до загрузки скилла, не отправляется.
+test('a variant revision goes to Claude right away and the window stays open', async ($, on) => {
+  // A revision already in the file before the skill loaded is not sent.
   const world = setup(on, { pubspec: FLUTTER_PUBSPEC })
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   const appDir = world.appDir() ?? ''
   const path = `${appDir}/.state/decision.json`
   await $.session.end({ reason: 'clear', sessionId: 'session-1', resume: { id: 'session-1' } })
-  const old = { id: 'r-old', variantId: 'a', title: 'А', target: '', text: 'старая правка', at: '2026-10-10T09:00:00Z' }
-  world.write(path, JSON.stringify({ round: 'r1', feature: 'Экран', chosen: null, notes: [], requests: [old] }))
+  const old = { id: 'r-old', variantId: 'a', title: 'A', target: '', text: 'old revision', at: '2026-10-10T09:00:00Z' }
+  world.write(path, JSON.stringify({ round: 'r1', feature: 'Screen', chosen: null, notes: [], requests: [old] }))
   await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   await $.tool.call({ tool: 'Write', file_path: `${appDir}/lib/registry.dart`, content: '' })
   await $.turn.complete(TURN)
@@ -704,29 +704,29 @@ test('правка варианта сразу уходит Claude, окно н�
   await clock.advance(4000)
   expect(world.prompts).toEqual([])
 
-  const fix = { id: 'r1', variantId: 'card-row', title: 'Строка', target: 'кнопка «+»', text: 'сделай синей и увеличь отступ', at: '2026-10-10T10:00:00Z' }
-  world.write(path, JSON.stringify({ round: 'r1', feature: 'Экран', chosen: null, notes: [], requests: [old, fix] }))
+  const fix = { id: 'r1', variantId: 'card-row', title: 'Row', target: 'the + button', text: 'make it blue and increase the padding', at: '2026-10-10T10:00:00Z' }
+  world.write(path, JSON.stringify({ round: 'r1', feature: 'Screen', chosen: null, notes: [], requests: [old, fix] }))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(1)
-  expect(world.prompts[0]).toContain('Правка варианта из окна-пикера — card-row («Строка»), элемент «кнопка «+»»: сделай синей и увеличь отступ.')
+  expect(world.prompts[0]).toContain('Variant revision from the picker window — card-row ("Row"), element "the + button": make it blue and increase the padding.')
   expect(world.prompts[0]).toContain(`${appDir}/lib/variants`)
-  expect(world.prompts[0]).not.toContain('старая правка')
+  expect(world.prompts[0]).not.toContain('old revision')
   expect(JSON.parse(world.files.get(`${appDir}/.state/requests-ack.json`)?.text ?? '{}')).toEqual({ sent: ['r-old', 'r1'] })
-  expect(world.toasts.some(text => text.startsWith('Правка отправлена Claude'))).toBe(true)
+  expect(world.toasts.some(text => text.startsWith('Revision sent to Claude'))).toBe(true)
 
-  // Повторное чтение файла — без повторной отправки; две новые — одним сообщением.
-  world.write(path, JSON.stringify({ round: 'r1', feature: 'Экран', chosen: null, notes: [], requests: [old, fix] }))
+  // Rereading the file sends nothing again; two new ones go in one message.
+  world.write(path, JSON.stringify({ round: 'r1', feature: 'Screen', chosen: null, notes: [], requests: [old, fix] }))
   await clock.advance(4000)
   expect(world.prompts.length).toBe(1)
   const more = [
-    { id: 'r2', variantId: 'card-row', title: 'Строка', target: '', text: 'поменяй порядок', at: '2026-10-10T10:01:00Z' },
-    { id: 'r3', variantId: 'card-hero', title: 'Герой', target: '', text: 'меньше шрифт', at: '2026-10-10T10:01:01Z' },
+    { id: 'r2', variantId: 'card-row', title: 'Row', target: '', text: 'change the order', at: '2026-10-10T10:01:00Z' },
+    { id: 'r3', variantId: 'card-hero', title: 'Hero', target: '', text: 'smaller font', at: '2026-10-10T10:01:01Z' },
   ]
-  world.write(path, JSON.stringify({ round: 'r1', feature: 'Экран', chosen: null, notes: [], requests: [old, fix, ...more] }))
+  world.write(path, JSON.stringify({ round: 'r1', feature: 'Screen', chosen: null, notes: [], requests: [old, fix, ...more] }))
   await clock.advance(2000)
   expect(world.prompts.length).toBe(2)
-  expect(world.prompts[1]).toContain('Правки вариантов из окна-пикера: 1) card-row («Строка»): поменяй порядок; 2) card-hero («Герой»): меньше шрифт.')
-  // Правка не закрывает окно, в отличие от выбора.
+  expect(world.prompts[1]).toContain('Variant revisions from the picker window: 1) card-row ("Row"): change the order; 2) card-hero ("Hero"): smaller font.')
+  // Unlike a choice, a revision does not close the window.
   await clock.advance(5000)
   expect(world.alive.has(4242)).toBe(true)
 })

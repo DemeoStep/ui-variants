@@ -1,47 +1,47 @@
-// Интерфейс варианта UI. Каждый вариант — подкласс Variant в lib/variants/,
-// зарегистрированный в lib/registry.dart.
+// The UI variant interface. Every variant is a Variant subclass in lib/variants/,
+// registered in lib/registry.dart.
 import 'package:flutter/widgets.dart';
 
-/// Категория варианта: раскладка, цвета или вид виджета.
+/// The variant category: layout, colors or a widget look.
 enum VariantCategory {
-  layout('Раскладка'),
-  color('Цвета'),
-  widget('Вид виджета');
+  layout('Layout'),
+  color('Colors'),
+  widget('Widget');
 
   const VariantCategory(this.label);
 
-  /// Подпись группы в списке вариантов.
+  /// The group label.
   final String label;
 }
 
-/// Один вариант UI для показа в окне-пикере.
+/// One UI variant shown in the picker window.
 abstract class Variant {
   const Variant();
 
-  /// Уникальный id латиницей, например `login-compact`.
+  /// A unique id, for example `login-compact`.
   String get id;
 
-  /// Название в списке, по-русски.
+  /// A short title, in the conversation language.
   String get title;
 
-  /// Категория варианта.
+  /// The variant category.
   VariantCategory get category;
 
-  /// Фича, к которой относится вариант (одна на весь показ), например «Экран входа».
+  /// The feature the variant belongs to (one per show), for example "Sign-in screen".
   String get feature;
 
-  /// Короткое пояснение под названием (необязательно).
+  /// A short description under the title (optional).
   String get description => '';
 
-  /// Вопрос, в котором выбирается один вариант; по умолчанию — категория.
-  /// Если в показе несколько независимых пунктов (раскладка и цвет, разные
-  /// элементы), у каждого пункта своя группа, например «Кнопка входа», и окно
-  /// попросит выбрать по варианту в каждой.
+  /// The question in which one variant is chosen; the category by default.
+  /// If a show has several independent things to choose (layout and color,
+  /// different elements), each gets its own group, for example "Sign-in button",
+  /// and the window asks for one variant in each.
   String get group => category.label;
 
-  /// Экран целиком (true) или отдельный компонент, который окно покажет по центру.
+  /// A whole screen (true) or a component that the window centers.
   bool get isFullScreen => category == VariantCategory.layout;
 
-  /// Сам вариант. Строится внутри MaterialApp с темой проекта и размером предпросмотра.
+  /// The variant itself. Built inside a MaterialApp with the project theme and the preview size.
   Widget build(BuildContext context);
 }

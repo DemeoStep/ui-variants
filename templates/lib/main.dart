@@ -1,4 +1,4 @@
-// Точка входа окна-пикера вариантов UI. Файл обновляется модом ui-variants.
+// Entry point of the UI variants picker window. Updated by the ui-variants mod.
 import 'package:flutter/widgets.dart';
 
 import '_host/picker.dart';

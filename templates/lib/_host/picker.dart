@@ -1,5 +1,6 @@
-// Окно-пикер: варианты текущего вопроса рядом, каждый в рамке выбранного
-// устройства; вопросы — чипы сверху; внизу общий комментарий и отправка.
+// The picker window: the variants of the current question side by side, each in
+// the chosen device frame; questions are chips on top; a general note and the
+// send button are at the bottom.
 import 'dart:async';
 import 'dart:io' show exit;
 
@@ -14,13 +15,13 @@ import 'window.dart';
 typedef PreviewThemeBuilder = ThemeData Function();
 typedef PreviewWrapper = Widget Function(BuildContext context, Widget child);
 
-/// Значение выбора устройства «без рамки, по размеру карточки».
+/// The device value for "no frame, card size".
 const String _freeSize = 'free';
 
-/// Сколько вариантов помещается рядом; больше — прокрутка вбок.
+/// How many variants fit side by side; more scroll sideways.
 const int _maxSideBySide = 4;
 
-/// Приложение окна-пикера.
+/// The picker window app.
 class PickerApp extends StatelessWidget {
   const PickerApp({
     super.key,
@@ -47,7 +48,7 @@ class PickerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     const seed = Color(0xFF55657F);
     return MaterialApp(
-      title: 'Варианты UI',
+      title: 'UI Variants',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: seed),
       darkTheme: ThemeData(
@@ -60,7 +61,7 @@ class PickerApp extends StatelessWidget {
   }
 }
 
-/// Экран выбора вариантов.
+/// The variant picker screen.
 class PickerScreen extends StatefulWidget {
   const PickerScreen({super.key, required this.app});
 
@@ -76,36 +77,36 @@ class _PickerScreenState extends State<PickerScreen> {
   late final List<PreviewDevice> _devices = previewDevices();
   final TextEditingController _comment = TextEditingController();
 
-  /// Открытый вопрос.
+  /// The open question.
   String _group = '';
 
-  /// Устройство предпросмотра или [_freeSize].
+  /// The preview device, or [_freeSize].
   String _deviceId = _freeSize;
   bool _isLandscape = false;
   bool _isDark = false;
   String _status = '';
 
-  /// Ответ мода на последний выбор: null — ждём, `waiting` — долго нет ответа.
+  /// The mod's answer to the last choice: null while waiting, `waiting` if it takes long.
   String? _ackStatus;
   Timer? _ackTimer;
 
-  /// Отметки последней отправки: те же повторно не отправляются.
+  /// The marks of the last send: the same marks are not sent again.
   String? _sentMarks;
 
-  /// Сторож: окно закрывается само, если сессия Claude пропала без session.end.
+  /// Watchdog: the window closes itself if the Claude session vanished without session.end.
   Timer? _watchdog;
   int _staleChecks = 0;
 
-  /// Запуск окна (и каждый hot restart): правки до него уже учтены в вариантах.
+  /// Window start (and every hot restart): revisions before it are already in the variants.
   final DateTime _startedAt = DateTime.now();
 
-  /// Правки, которые мод уже отправил Claude.
+  /// Revisions the mod has already sent to Claude.
   Set<String> _sentRequests = <String>{};
   Timer? _requestTimer;
 
   List<Variant> get _variants => widget.app.variants;
 
-  /// Вопросы показа в порядке появления вариантов.
+  /// The questions of the show, in the order of the variants.
   List<String> get _groups {
     final groups = <String>[];
     for (final variant in _variants) {
@@ -114,8 +115,8 @@ class _PickerScreenState extends State<PickerScreen> {
     return groups;
   }
 
-  /// Несколько вопросов: вариант отмечается в каждом, затем всё отправляется
-  /// одним сообщением. Один вопрос: «Выбрать» сразу отправляет выбор.
+  /// Several questions: a variant is marked in each, then everything is sent in
+  /// one message. One question: Choose sends the choice right away.
   bool get _isMulti => _groups.length > 1;
 
   Choice? _choiceIn(String group) {
@@ -136,8 +137,8 @@ class _PickerScreenState extends State<PickerScreen> {
       .map((choice) => '${choice.group}=${choice.variantId}')
       .join(';');
 
-  /// Отправить можно, когда отмечено по варианту в каждом вопросе и эти
-  /// отметки ещё не отправлялись.
+  /// Sending is possible when each question has a marked variant and these marks
+  /// have not been sent yet.
   bool get _canSend =>
       _markedCount == _groups.length && _marksKey() != _sentMarks;
 
@@ -165,15 +166,15 @@ class _PickerScreenState extends State<PickerScreen> {
     _isLandscape = view['landscape'] == true;
     _isDark = view['dark'] == true;
     if (!_file.isAvailable) {
-      _status = 'Не задан UI_VARIANTS_STATE: выбор не будет передан Claude.';
+      _status = 'UI_VARIANTS_STATE is not set: the choice will not reach Claude.';
     }
     _startWatchdog();
     bringWindowToFront();
   }
 
-  /// Метку жизни мод пишет раз в 5 секунд. Окно закрывается, если метка старше
-  /// минуты при двух проверках подряд: одна устаревшая проверка бывает сразу
-  /// после сна Mac, пока мод ещё не обновил метку.
+  /// The mod writes a liveness mark every 5 seconds. The window closes if the
+  /// mark is over a minute old on two checks in a row: a single stale check can
+  /// happen right after the Mac wakes up, before the mod refreshes the mark.
   void _startWatchdog() {
     _watchdog = Timer.periodic(const Duration(seconds: 15), (timer) {
       final at = _file.readHeartbeat();
@@ -195,9 +196,9 @@ class _PickerScreenState extends State<PickerScreen> {
 
   String _now() => DateTime.now().toUtc().toIso8601String();
 
-  /// Решение из файла, если это тот же показ и выбор ещё не сделан
-  /// (отметки и комментарии сохраняются); иначе — новый показ. Файл не
-  /// трогается до первого действия.
+  /// The decision from the file if it is the same show and no choice was made
+  /// yet (marks and notes are kept); otherwise a new show. The file is not
+  /// touched until the first action.
   Decision _loadDecision() {
     final ids = _variants.map((variant) => variant.id).toList()..sort();
     final saved = _file.read();
@@ -220,7 +221,7 @@ class _PickerScreenState extends State<PickerScreen> {
   bool _save(String status) {
     if (!_file.isAvailable) {
       setState(() => _status =
-          'Не задан UI_VARIANTS_STATE: решение не сохранено и не будет передано Claude.');
+          'UI_VARIANTS_STATE is not set: the decision is not saved and will not reach Claude.');
       return false;
     }
     try {
@@ -228,12 +229,12 @@ class _PickerScreenState extends State<PickerScreen> {
       setState(() => _status = status);
       return true;
     } on Object catch (error) {
-      setState(() => _status = 'Не удалось сохранить решение: $error');
+      setState(() => _status = 'Could not save the decision: $error');
       return false;
     }
   }
 
-  /// Общий комментарий из нижнего поля уходит вместе с выбором.
+  /// The general note from the bottom field goes with the choice.
   void _takeComment() {
     final text = _comment.text.trim();
     if (text.isEmpty) return;
@@ -248,7 +249,7 @@ class _PickerScreenState extends State<PickerScreen> {
         (a, b) => order.indexOf(a.group).compareTo(order.indexOf(b.group)));
   }
 
-  /// Один вопрос: выбор варианта сразу отправляется Claude.
+  /// One question: the chosen variant goes to Claude right away.
   void _choose(Variant variant) {
     _takeComment();
     _decision.choices
@@ -263,7 +264,7 @@ class _PickerScreenState extends State<PickerScreen> {
     if (_save('')) _watchAck();
   }
 
-  /// Несколько вопросов: отмечает вариант в его вопросе.
+  /// Several questions: marks the variant in its question.
   void _mark(Variant variant) {
     _decision.feature = variant.feature;
     _decision.choices
@@ -273,11 +274,11 @@ class _PickerScreenState extends State<PickerScreen> {
     _sortChoices();
     final left = _groups.where((group) => _choiceIn(group) == null).toList();
     _save(left.isEmpty
-        ? 'Выбор сделан во всех вопросах. Нажмите «Отправить выбор».'
-        : 'Отмечено. Осталось выбрать: ${left.join(', ')}.');
+        ? 'Every question has a choice. Press Send choice.'
+        : 'Marked. Still to choose: ${left.join(', ')}.');
   }
 
-  /// Несколько вопросов: отправляет Claude все отметки одним сообщением.
+  /// Several questions: sends all marks to Claude in one message.
   void _send() {
     if (!_canSend) return;
     _takeComment();
@@ -291,7 +292,7 @@ class _PickerScreenState extends State<PickerScreen> {
     if (_save('')) _watchAck();
   }
 
-  /// Ждёт ack.json от мода для текущего выбора.
+  /// Waits for the mod's ack.json for the current choice.
   void _watchAck() {
     _ackTimer?.cancel();
     _ackStatus = null;
@@ -312,14 +313,14 @@ class _PickerScreenState extends State<PickerScreen> {
     });
   }
 
-  /// Правки варианта, отправленные после запуска окна: вариант ещё не обновлён.
+  /// Revisions sent after the window started: the variant is not updated yet.
   List<Request> _pendingRequests(Variant variant) => _decision.requests
       .where((request) =>
           request.variantId == variant.id &&
           (DateTime.tryParse(request.at)?.isAfter(_startedAt) ?? false))
       .toList();
 
-  /// Следит, когда мод отправит новые правки Claude.
+  /// Watches for the mod to send new revisions to Claude.
   void _watchRequests() {
     _requestTimer?.cancel();
     _requestTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -350,8 +351,8 @@ class _PickerScreenState extends State<PickerScreen> {
           target: result.target,
           text: result.text,
           at: at.toIso8601String()));
-      _save('Заметка к «${variant.title}» сохранена. '
-          'Claude получит её вместе с выбором.');
+      _save('Note on "${variant.title}" saved. '
+          'Claude gets it with the choice.');
       return;
     }
     _decision.requests.add(Request(
@@ -362,8 +363,8 @@ class _PickerScreenState extends State<PickerScreen> {
       text: result.text,
       at: at.toIso8601String(),
     ));
-    if (_save('Правка «${variant.title}» отправлена Claude. '
-        'Окно обновится, когда вариант будет готов.')) {
+    if (_save('Revision of "${variant.title}" sent to Claude. '
+        'The window refreshes when the variant is ready.')) {
       _watchRequests();
     }
   }
@@ -392,7 +393,7 @@ class _PickerScreenState extends State<PickerScreen> {
     final theme = Theme.of(context);
     return Center(
       child: Text(
-        'Вариантов пока нет.\nClaude добавит их в lib/registry.dart, и окно обновится само.',
+        'No variants yet.\nClaude adds them to lib/registry.dart, and the window refreshes by itself.',
         textAlign: TextAlign.center,
         style: theme.textTheme.bodyLarge
             ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -408,7 +409,7 @@ class _PickerScreenState extends State<PickerScreen> {
     };
     final subtitle = <String>[
       if (widget.app.package.isNotEmpty) widget.app.package,
-      'шаблоны $hostTemplateVersion',
+      'templates $hostTemplateVersion',
     ].join(' · ');
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
@@ -418,7 +419,7 @@ class _PickerScreenState extends State<PickerScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(features.isEmpty ? 'Варианты UI' : features.join(', '),
+              Text(features.isEmpty ? 'UI Variants' : features.join(', '),
                   style: theme.textTheme.titleMedium),
               Text(subtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -450,7 +451,7 @@ class _PickerScreenState extends State<PickerScreen> {
           ),
           _buildDeviceMenu(context),
           IconButton(
-            tooltip: _isLandscape ? 'Портретная ориентация' : 'Альбомная ориентация',
+            tooltip: _isLandscape ? 'Portrait' : 'Landscape',
             icon: const Icon(Icons.screen_rotation),
             onPressed: _deviceId == _freeSize
                 ? null
@@ -460,7 +461,7 @@ class _PickerScreenState extends State<PickerScreen> {
                   },
           ),
           IconButton(
-            tooltip: _isDark ? 'Светлая тема' : 'Тёмная тема',
+            tooltip: _isDark ? 'Light theme' : 'Dark theme',
             icon: Icon(_isDark ? Icons.light_mode : Icons.dark_mode),
             onPressed: () {
               setState(() => _isDark = !_isDark);
@@ -475,7 +476,7 @@ class _PickerScreenState extends State<PickerScreen> {
   Widget _buildDeviceMenu(BuildContext context) {
     final device = _device;
     return PopupMenuButton<String>(
-      tooltip: 'Устройство предпросмотра',
+      tooltip: 'Preview device',
       initialValue: _deviceId,
       constraints: const BoxConstraints(minWidth: 280, maxWidth: 380),
       onSelected: (value) {
@@ -485,7 +486,7 @@ class _PickerScreenState extends State<PickerScreen> {
       itemBuilder: (context) => <PopupMenuEntry<String>>[
         const PopupMenuItem<String>(
           value: _freeSize,
-          child: Text('Без рамки, по размеру карточки'),
+          child: Text('No frame, card size'),
         ),
         const PopupMenuDivider(),
         for (final item in _devices)
@@ -513,7 +514,7 @@ class _PickerScreenState extends State<PickerScreen> {
                 ? Icons.crop_free
                 : (device.isTablet ? Icons.tablet_mac : Icons.smartphone)),
             const SizedBox(width: 8),
-            Text(device?.name ?? 'Без рамки'),
+            Text(device?.name ?? 'No frame'),
             const Icon(Icons.arrow_drop_down),
           ],
         ),
@@ -596,9 +597,9 @@ class _PickerScreenState extends State<PickerScreen> {
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
               child: Text(
                 isSent
-                    ? 'Claude правит вариант: ${pending.last.text}'
-                    : 'Отправляем правку Claude…',
-                maxLines: 2,
+                    ? 'Claude is revising: ${pending.last.text}'
+                    : 'Sending the revision to Claude…',
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.primary),
@@ -637,17 +638,17 @@ class _PickerScreenState extends State<PickerScreen> {
                   FilledButton.icon(
                     onPressed: null,
                     icon: const Icon(Icons.check),
-                    label: const Text('Выбран'),
+                    label: const Text('Chosen'),
                   )
                 else
                   OutlinedButton(
                     onPressed: () =>
                         _isMulti ? _mark(variant) : _choose(variant),
-                    child: const Text('Выбрать'),
+                    child: const Text('Choose'),
                   ),
                 const SizedBox(width: 4),
                 IconButton(
-                  tooltip: 'Правка или заметка',
+                  tooltip: 'Revise or add a note',
                   onPressed: () => _editNote(variant),
                   icon: Badge(
                     isLabelVisible: notes > 0,
@@ -695,30 +696,30 @@ class _PickerScreenState extends State<PickerScreen> {
     );
   }
 
-  /// Плашка о судьбе выбора: передан ли он Claude.
+  /// A banner about the choice: whether it reached Claude.
   Widget _buildChoiceBanner(BuildContext context) {
     final theme = Theme.of(context);
     final title = _decision.chosenTitle ?? _decision.chosen ?? '';
     final what =
-        _decision.choices.length > 1 ? 'выбор ($title)' : 'выбор «$title»';
-    final whatCapital = 'В${what.substring(1)}';
+        _decision.choices.length > 1 ? 'choice ($title)' : 'choice "$title"';
+    final whatCapital = 'C${what.substring(1)}';
     String text;
     var isWarning = false;
     switch (_ackStatus) {
       case 'sent':
-        text = 'Claude получил $what и реализует его в проекте. '
-            'Окно сейчас закроется.';
+        text = 'Claude got your $what and is implementing it in the project. '
+            'The window will close now.';
         break;
       case 'duplicate':
-        text = '$whatCapital уже отправлен Claude. Окно сейчас закроется.';
+        text = '$whatCapital was already sent to Claude. The window will close now.';
         break;
       case 'waiting':
-        text = '$whatCapital сохранён, но Claude пока не ответил. '
-            'Проверьте, что сессия Claude в этом проекте открыта.';
+        text = '$whatCapital is saved, but Claude has not answered yet. '
+            'Check that the Claude session for this project is open.';
         isWarning = true;
         break;
       default:
-        text = '$whatCapital сохранён, передаём Claude…';
+        text = '$whatCapital is saved, sending it to Claude…';
     }
     final background = isWarning
         ? theme.colorScheme.errorContainer
@@ -754,8 +755,8 @@ class _PickerScreenState extends State<PickerScreen> {
   Widget _buildBottomBar(BuildContext context) {
     final theme = Theme.of(context);
     final hint = _isMulti
-        ? 'Отметьте вариант в каждом вопросе и нажмите «Отправить выбор».'
-        : 'Нажмите «Выбрать» под вариантом — выбор сразу уйдёт Claude.';
+        ? 'Mark a variant in each question, then press Send choice.'
+        : 'Press Choose under a variant: the choice goes to Claude right away.';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
@@ -772,7 +773,7 @@ class _PickerScreenState extends State<PickerScreen> {
                 child: TextField(
                   controller: _comment,
                   decoration: const InputDecoration(
-                    hintText: 'Общий комментарий (необязательно)',
+                    hintText: 'General note (optional)',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -780,13 +781,13 @@ class _PickerScreenState extends State<PickerScreen> {
               ),
               if (_isMulti) ...<Widget>[
                 const SizedBox(width: 12),
-                Text('Выбрано $_markedCount из ${_groups.length}',
+                Text('Chosen $_markedCount of ${_groups.length}',
                     style: theme.textTheme.bodyMedium),
                 const SizedBox(width: 12),
                 FilledButton.icon(
                   onPressed: _canSend ? _send : null,
                   icon: const Icon(Icons.send),
-                  label: const Text('Отправить выбор'),
+                  label: const Text('Send choice'),
                 ),
               ],
             ],
@@ -803,7 +804,7 @@ class _PickerScreenState extends State<PickerScreen> {
   }
 }
 
-/// Что ввёл пользователь в диалоге: правка (сразу Claude) или заметка к выбору.
+/// What the user entered in the dialog: a revision (to Claude now) or a note for the choice.
 class _NoteResult {
   const _NoteResult(
       {required this.text, required this.target, required this.isRevision});
@@ -813,8 +814,8 @@ class _NoteResult {
   final bool isRevision;
 }
 
-/// Диалог варианта: правка, которую Claude внесёт сразу, или заметка, которая
-/// придёт вместе с выбором; выше — история прошлых правок и заметок.
+/// The variant dialog: a revision Claude makes right away, or a note that comes
+/// with the choice; earlier revisions and notes are listed above.
 class _NoteDialog extends StatefulWidget {
   const _NoteDialog(
       {required this.variant, required this.notes, required this.requests});
@@ -857,7 +858,7 @@ class _NoteDialogState extends State<_NoteDialog> {
       for (final note in widget.notes) _line('•', note.target, note.text),
     ];
     return AlertDialog(
-      title: Text('«${widget.variant.title}»: правка или заметка'),
+      title: Text('"${widget.variant.title}": revise or add a note'),
       content: SizedBox(
         width: 480,
         child: Column(
@@ -876,9 +877,9 @@ class _NoteDialogState extends State<_NoteDialog> {
               minLines: 2,
               maxLines: 5,
               decoration: const InputDecoration(
-                labelText: 'Что изменить',
-                hintText: 'например: сделай кнопку синей, увеличь отступы, '
-                    'поменяй порядок блоков',
+                labelText: 'What to change',
+                hintText: 'e.g. make the button blue, increase the padding, '
+                    'swap the blocks',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -886,16 +887,16 @@ class _NoteDialogState extends State<_NoteDialog> {
             TextField(
               controller: _target,
               decoration: const InputDecoration(
-                labelText: 'Элемент (необязательно)',
-                hintText: 'например, кнопка входа',
+                labelText: 'Element (optional)',
+                hintText: 'e.g. the sign-in button',
                 border: OutlineInputBorder(),
               ),
               onSubmitted: (_) => _submit(true),
             ),
             const SizedBox(height: 10),
             Text(
-              '«Исправить вариант» — Claude сразу поменяет вариант, окно '
-              'обновится. «Только заметка» — придёт Claude вместе с выбором.',
+              'Revise variant: Claude changes the variant now and the window '
+              'refreshes. Note only: Claude gets it with the choice.',
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -905,24 +906,24 @@ class _NoteDialogState extends State<_NoteDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Отмена'),
+          child: const Text('Cancel'),
         ),
         OutlinedButton(
           onPressed: () => _submit(false),
-          child: const Text('Только заметка'),
+          child: const Text('Note only'),
         ),
         FilledButton(
           onPressed: () => _submit(true),
-          child: const Text('Исправить вариант'),
+          child: const Text('Revise variant'),
         ),
       ],
     );
   }
 }
 
-/// Отдельное приложение для предпросмотра: тема проекта и свой Navigator.
-/// В рамке размер экрана и безопасные зоны задаёт рамка устройства, без рамки —
-/// размер карточки.
+/// A separate app for the preview: the project theme and its own Navigator.
+/// In a frame, the device frame sets the screen size and safe areas; without a
+/// frame, the card size does.
 class _PreviewApp extends StatelessWidget {
   const _PreviewApp({
     super.key,
@@ -957,8 +958,8 @@ class _PreviewApp extends StatelessWidget {
   ThemeData _withPlatform(ThemeData theme) =>
       platform == null ? theme : theme.copyWith(platform: platform);
 
-  /// [media] — экран устройства; вложенный MaterialApp берёт размер окна,
-  /// поэтому он подменяется в builder.
+  /// [media] is the device screen; a nested MaterialApp takes the window size,
+  /// so it is replaced in builder.
   Widget _buildApp(MediaQueryData media) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,

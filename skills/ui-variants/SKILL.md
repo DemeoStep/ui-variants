@@ -1,38 +1,38 @@
 ---
 name: ui-variants
-description: Показывает варианты UI в живом окне-пикере macOS. Используй в этом Flutter-проекте, когда есть несколько равноценных вариантов раскладки, цветов или вида виджета, или пользователь просит варианты — вместо описания схемами в терминале.
-argument-hint: "[что показать | close | clean]"
+description: Shows UI variants in a live macOS picker window. Use it in this Flutter project when there are several equally good options for a layout, colors or a widget's look, or when the user asks for variants — instead of describing them with diagrams in the terminal.
+argument-hint: "[what to show | close | clean]"
 ---
 
-# Варианты UI в окне-пикере
+# UI variants in the picker window
 
-Покажи варианты для: $ARGUMENTS
-Если после двоеточия пусто — для текущей задачи. Обычно 2–4 варианта.
+Show variants for: $ARGUMENTS
+If nothing follows the colon, show them for the current task. Usually 2–4 variants.
 
-## Как писать варианты
-- Пиши только во временном приложении-пикере, не в проекте:
-  виджеты — отдельные файлы в `{{VARIANTS_DIR}}/`, регистрация — список `variants` в `{{REGISTRY}}`.
-- В реестре только варианты текущего показа; прежние записи убери.
-- Вариант — `class X extends Variant` (импорт `../_host/variant.dart`): `id` (латиница, kebab-case),
-  `title` по-русски, `category` (`VariantCategory.layout`, `.color` или `.widget`), `feature` (одна на показ),
-  `build(context)`. Экран целиком — `layout` или `isFullScreen => true`; иначе окно покажет вариант по центру.
-- Один вопрос — одна группа `group` (по умолчанию группа = категория). Если пунктов выбора несколько
-  (раскладка и цвет, разные элементы), разведи их по группам: пользователь выберет по варианту в каждой
-  и отправит всё разом. Альтернативы одного пункта держи в одной группе.
-- Код проекта импортируй как `package:{{PACKAGE}}/...`, ассеты и шрифты — с префиксом `packages/{{PACKAGE}}/`.
-  Если импорт ломает сборку, напиши вариант на чистых виджетах Flutter.
-- Данные — правдоподобные моки, без сети и реальных сервисов.
-- При первом использовании в проекте подключи тему приложения в `{{THEME}}`
-  (найди тему в проекте и импортируй её из `package:{{PACKAGE}}/...`).
-- Перед концом хода проверь: `flutter analyze {{APP_DIR}}/lib` без ошибок.
+## Writing variants
+- Write only in the temporary picker app, never in the project:
+  widgets go into separate files in `{{VARIANTS_DIR}}/`, registration goes into the `variants` list in `{{REGISTRY}}`.
+- The registry holds only the variants of the current show; remove earlier entries.
+- A variant is `class X extends Variant` (import `../_host/variant.dart`): `id` (kebab-case),
+  `title` (short, in the conversation's language), `category` (`VariantCategory.layout`, `.color` or `.widget`),
+  `feature` (one per show), `build(context)`. A whole screen is `layout` or `isFullScreen => true`; otherwise the window centers the variant.
+- One question is one `group` (the category by default). If there are several things to choose
+  (layout and color, different elements), split them into groups: the user picks one variant in each
+  and sends everything at once. Keep the alternatives for one thing in one group.
+- Import project code as `package:{{PACKAGE}}/...`, assets and fonts with the `packages/{{PACKAGE}}/` prefix.
+  If an import breaks the build, write the variant with plain Flutter widgets.
+- Use realistic mock data, no network and no real services.
+- The first time in a project, wire the app's theme into `{{THEME}}`
+  (find the theme in the project and import it from `package:{{PACKAGE}}/...`).
+- Before ending the turn, check: `flutter analyze {{APP_DIR}}/lib` reports no errors.
 
-## Правила
-- Не создавай и не меняй ничего в проекте ради показа вариантов. Схемами в терминале варианты не описывай.
-- После записи вариантов кратко назови их в ответе (id и одна фраза) и заверши ход.
-  Окно откроется или обновится само, выбор придёт отдельным сообщением.
-- Сообщение «Правка варианта из окна-пикера»: поменяй только названные варианты (id, класс и
-  регистрацию сохрани), проект не трогай, проверь analyze, ответь одной фразой и заверши ход.
-- После сообщения с выбором реализуй выбранный вариант в проекте и учти комментарии
-  (полностью они в `{{DECISION}}`).
-- Не спрашивай разрешения показать варианты. Никогда не проси пользователя запускать команды,
-  открывать окно или указывать пути для этого процесса.
+## Rules
+- Do not create or change anything in the project to show variants. Do not describe variants with diagrams in the terminal.
+- After writing the variants, name them briefly in your reply (id and one phrase) and end the turn.
+  The window opens or refreshes by itself; the choice arrives as a separate message.
+- A "Variant revision from the picker window" message: change only the named variants (keep the id, class and
+  registration), do not touch the project, check analyze, reply in one sentence and end the turn.
+- After the message with the choice, implement the chosen variant in the project and take the notes into account
+  (all of them are in `{{DECISION}}`).
+- Do not ask for permission to show variants. Never ask the user to run commands,
+  open the window or give paths for this process.

@@ -1,35 +1,45 @@
 # ui-variants
 
-Мод для [Claude Code](https://code.claude.com): варианты UI для Flutter-проекта появляются в живом окне на macOS, а не описываются схемами в терминале.
+A [Claude Code](https://code.claude.com) mod that shows UI variants for your Flutter project in a live macOS window instead of describing them with diagrams in the terminal.
 
-Claude пишет 2–4 варианта экрана, цвета или виджета во временном приложении-пикере. Вы сравниваете их рядом в рамках настоящих устройств, просите правки и выбираете. Выбор сам возвращается в сессию, и Claude реализует его в проекте. В терминал заходить не нужно.
+Claude writes 2–4 variants of a screen, a color scheme or a widget into a temporary picker app. You compare them side by side in real device frames, ask for revisions and pick one. Your choice goes back to the session by itself, and Claude implements it in the project. You never have to switch to the terminal.
 
-## Что умеет окно
+![Three layout variants of a "Today" screen side by side in iPhone 17 frames](screenshots/compare.png)
 
-- **Варианты рядом.** Все варианты текущего вопроса видны сразу, каждый в рамке выбранного устройства. В меню телефоны и планшеты iOS и Android, в том числе iPhone 17, 17 Pro, 17 Pro Max, Air и 16e, или режим «без рамки». Есть поворот экрана и тёмная тема.
-- **Несколько вопросов.** Например, раскладка и цвет: вариант отмечается в каждом вопросе, а «Отправить выбор» отправляет всё одним сообщением.
-- **Правки на лету.** «Исправить вариант» сразу отправляет Claude просьбу, например «сделай кнопку синей», «увеличь отступы» или «поменяй порядок». Claude меняет только этот вариант, окно обновляется горячим перезапуском.
-- **Заметки к выбору.** Комментарий к варианту или общий комментарий приходят Claude вместе с выбором.
-- **Окно не висит.** Оно закрывается после выбора и с концом сессии. Если сессия упала, окно закроется само примерно через минуту.
+## What the window does
 
-## Требования
+- **Side-by-side comparison.** All variants of the current question are visible at once, each in the frame of the device you pick. The menu lists iOS and Android phones and tablets, including iPhone 17, 17 Pro, 17 Pro Max, Air and 16e, plus a "no frame" mode. Landscape and dark theme are one click away.
+- **Several questions at once.** When a show has independent things to choose, such as a layout and a color, you mark a variant in each question and send everything in one message.
+- **Revisions on the fly.** "Revise variant" sends a request to Claude right away: "make the button blue", "increase the padding", "swap the blocks". Claude changes only that variant, and the window refreshes with a hot restart.
+- **Notes for the choice.** A note on a variant, or a general note, reaches Claude together with your choice.
+- **The window does not linger.** It closes after you choose and when the session ends. If the session dies, the window closes itself in about a minute.
 
-- macOS, Xcode и Flutter SDK. Если в проекте есть `.fvm/flutter_sdk`, используется он.
-- Claude Code 2.1.287 или новее: мод написан на API модов (hooks module).
+| Several questions | Device frames |
+|---|---|
+| ![The Colors question with two color variants](screenshots/colors.png) | ![The device menu with the newest iPhones](screenshots/devices.png) |
 
-## Установка
+| Ask for a revision | Claude is revising |
+|---|---|
+| ![The revise dialog on a variant](screenshots/revise-dialog.png) | ![A card shows that Claude is revising the variant](screenshots/revising.png) |
 
-Мод стоит включать только в нужных Flutter-проектах (уровень `local`). В остальных проектах он не загружается и не занимает контекст.
+## Requirements
 
-В терминальной сессии Claude Code внутри проекта:
+- macOS with Xcode and the Flutter SDK. If the project has `.fvm/flutter_sdk`, that Flutter is used.
+- Claude Code 2.1.287 or newer: the mod is built on the mods API (a hooks module).
+
+## Install
+
+Enable the mod only in the Flutter projects where you want it (`local` scope). In other projects it is not loaded and takes no context.
+
+In a Claude Code terminal session inside the project:
 
 ```
 /plugin install ui-variants --marketplace DemeoStep/ui-variants
 ```
 
-На вопрос о добавлении маркетплейса ответьте `y`, затем выберите «Install for you, in this repo only (local scope)».
+Answer `y` to add the marketplace, then choose "Install for you, in this repo only (local scope)".
 
-Или из командной строки в корне проекта:
+Or from the command line in the project root:
 
 ```bash
 claude plugin marketplace add DemeoStep/ui-variants
@@ -39,9 +49,9 @@ claude plugin marketplace add DemeoStep/ui-variants
 claude plugin install ui-variants@demeostep --scope local
 ```
 
-Установка `local` записывает одну строку в `.claude/settings.local.json` проекта. Claude Code добавляет этот файл в глобальные исключения git, поэтому в коммиты он не попадает.
+The `local` install writes one line to the project's `.claude/settings.local.json`. Claude Code adds that file to your global git excludes, so it never ends up in a commit.
 
-Выключить и включить снова:
+To turn the mod off and on again:
 
 ```bash
 claude plugin disable ui-variants@demeostep --scope local
@@ -51,9 +61,9 @@ claude plugin disable ui-variants@demeostep --scope local
 claude plugin enable ui-variants@demeostep --scope local
 ```
 
-### Рекомендуемые настройки
+### Recommended settings
 
-Чтобы Claude писал варианты во временное приложение без запросов разрешений, добавьте в `~/.claude/settings.json`:
+To let Claude write variants into the temporary app without permission prompts, add this to `~/.claude/settings.json`:
 
 ```json
 {
@@ -64,37 +74,37 @@ claude plugin enable ui-variants@demeostep --scope local
 }
 ```
 
-## Как пользоваться
+## Usage
 
-Ничего вызывать не нужно. Когда в задаче есть несколько равноценных вариантов, Claude сам загружает скилл `ui-variants` и показывает их в окне. Можно попросить и явно:
+There is nothing to run. When a task has several equally good options, Claude loads the `ui-variants` skill on its own and shows them in the window. You can also ask for variants explicitly:
 
 ```
-/ui-variants:ui-variants экран входа
+/ui-variants:ui-variants sign-in screen
 ```
 
-Аргументы скилла:
-- `close` — закрыть окно проекта;
-- `clean` — закрыть окно и удалить временное приложение.
+Skill arguments:
+- `close` closes the project's window;
+- `clean` closes the window and deletes the temporary app.
 
-Первое открытие окна в проекте занимает около минуты: создаётся и собирается приложение. Дальше варианты обновляются горячим перезапуском.
+The first time in a project the window takes about a minute to open while the app is created and built. After that, variants refresh with a hot restart.
 
-## Как это устроено
+## How it works
 
-1. **Скилл** `skills/ui-variants/SKILL.md` объясняет Claude, когда и как показывать варианты. В контексте постоянно лежит только его описание, около 90 токенов.
-2. **Мод** `hooks/register.js` до загрузки скилла ничего не делает. При загрузке скилла он создаёт или обновляет временное приложение в `~/Library/Caches/ui-variants/<пакет>-<хеш>/`: `flutter create`, шаблоны из `templates/`, зависимость на проект по пути, `flutter pub get`. Проект при этом не меняется, из него только читается `pubspec.yaml`.
-3. **Запуск окна.** Когда ход Claude меняет варианты, мод запускает `flutter run -d macos` или делает hot restart.
-4. **Обратная связь.** Окно пишет выбор, заметки и правки в `.state/decision.json`. Мод отправляет их в сессию следующим сообщением (`$.prompt.submit`) и подтверждает окну через `.state/ack.json` и `.state/requests-ack.json`.
+1. **The skill** `skills/ui-variants/SKILL.md` tells Claude when and how to show variants. Only its description stays in context, about 90 tokens.
+2. **The mod** `hooks/register.js` does nothing until the skill loads. Then it creates or updates a temporary app in `~/Library/Caches/ui-variants/<package>-<hash>/`: `flutter create`, the templates from `templates/`, a path dependency on your project, `flutter pub get`. Your project is never changed; only its `pubspec.yaml` is read.
+3. **The window.** When a Claude turn changes the variants, the mod starts `flutter run -d macos` or hot restarts the running window.
+4. **Feedback.** The window writes choices, notes and revisions to `.state/decision.json`. The mod sends them to the session as the next message (`$.prompt.submit`) and acknowledges them to the window through `.state/ack.json` and `.state/requests-ack.json`.
 
-**Рамки устройств** берутся из пакета [device_frame](https://pub.dev/packages/device_frame), версия подбирается в диапазоне `>=1.2.0 <2.0.0`. Новые iPhone, которых нет в пакете, описаны в моде. Если `device_frame` не совместим с зависимостями проекта, мод собирает пикер со встроенными упрощёнными рамками.
+**Device frames** come from the [device_frame](https://pub.dev/packages/device_frame) package, resolved in the `>=1.2.0 <2.0.0` range. The newest iPhones, which the package does not have yet, are defined by the mod. If `device_frame` does not fit your project's dependencies, the mod builds the picker with simplified built-in frames instead.
 
-**Сеть** используется только `flutter pub get`.
+**Network** is used only by `flutter pub get`.
 
-## Ограничения
+## Limitations
 
-- Только macOS. Плагины проекта без поддержки macOS в окне не работают.
-- В режиме `claude -p` окно не открывается: процесс завершается раньше, чем мод успевает его запустить.
+- macOS only. Project plugins without macOS support do not work in the window.
+- The window does not open in `claude -p`: the process exits before the mod can start it.
 
-## Разработка
+## Development
 
 ```bash
 claude plugin validate .
@@ -104,8 +114,10 @@ claude plugin validate .
 claude plugin test .
 ```
 
-После любых изменений увеличивайте `version` в `.claude-plugin/plugin.json`. По ней мод обновляет шаблоны в уже созданных временных приложениях; `lib/registry.dart`, `lib/theme.dart` и `lib/variants/` при этом не трогаются.
+Bump `version` in `.claude-plugin/plugin.json` after every change. The mod uses it to update the templates in already created temporary apps; `lib/registry.dart`, `lib/theme.dart` and `lib/variants/` are never overwritten.
 
-## Лицензия
+The screenshots show the real picker window rendered with demo variants.
+
+## License
 
 [MIT](LICENSE) © 2026 Oleksii Horiainov

@@ -1,6 +1,6 @@
 {
   "name": "demeostep",
-  "description": "Моды Claude Code от Oleksii Horiainov",
+  "description": "Claude Code mods by Oleksii Horiainov",
   "owner": {
     "name": "Oleksii Horiainov"
   },
@@ -8,7 +8,7 @@
     {
       "name": "ui-variants",
       "source": "./",
-      "description": "Окно-пикер вариантов UI для Flutter-проектов на macOS"
+      "description": "A live macOS picker window for Flutter UI variants"
     }
   ]
 }

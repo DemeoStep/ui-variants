@@ -1,10 +1,10 @@
-// Рамки устройств для предпросмотра на пакете device_frame. Если pub не может
-// подобрать device_frame к зависимостям проекта, мод заменяет этот файл
-// встроенными рамками с тем же интерфейсом (fallback/frames.dart).
+// Device frames for previews, based on the device_frame package. If pub cannot
+// fit device_frame into the project's dependencies, the mod replaces this file
+// with built-in frames that have the same interface (fallback/frames.dart).
 import 'package:device_frame/device_frame.dart';
 import 'package:flutter/widgets.dart';
 
-/// Устройство в списке выбора.
+/// A device in the picker list.
 class PreviewDevice {
   const PreviewDevice({
     required this.id,
@@ -19,13 +19,13 @@ class PreviewDevice {
   final TargetPlatform platform;
 }
 
-/// Рамки реалистичные (device_frame), а не встроенные упрощённые.
+/// The frames are realistic (device_frame), not the built-in simplified ones.
 const bool hasRealFrames = true;
 
-/// iPhone новее тех, что есть в device_frame. Размеры экрана и безопасные
-/// зоны — по useyourloaf.com/blog/iphone-17-screen-sizes (у 16e — как у
-/// iPhone 14, на корпусе которого он сделан); рамка — общая, настроенная под
-/// современный iPhone, Dynamic Island или вырез рисуются поверх экрана.
+/// iPhones newer than the ones in device_frame. Screen sizes and safe areas are
+/// from useyourloaf.com/blog/iphone-17-screen-sizes (the 16e matches the
+/// iPhone 14, whose body it uses); the frame is the generic one tuned to look
+/// like a modern iPhone, and the Dynamic Island or notch is drawn over the screen.
 class _ExtraIphone {
   const _ExtraIphone(this.id, this.name, this.size, this.top,
       this.landscapeSide, this.landscapeBottom,
@@ -98,7 +98,7 @@ _ExtraIphone? _extraOf(String deviceId) {
   return null;
 }
 
-/// Dynamic Island или вырез поверх экрана добавленных iPhone.
+/// The Dynamic Island or notch over the screen of the added iPhones.
 Widget _withCutout(_ExtraIphone phone, bool isLandscape, Widget screen) {
   final width = phone.hasNotch ? 162.0 : 126.0;
   final height = phone.hasNotch ? 32.0 : 37.0;
@@ -127,7 +127,7 @@ Widget _withCutout(_ExtraIphone phone, bool isLandscape, Widget screen) {
 String _idOf(DeviceInfo info) =>
     '${info.identifier.platform.name}/${info.identifier.name}';
 
-/// Телефоны и планшеты iOS и Android.
+/// iOS and Android phones and tablets.
 List<PreviewDevice> previewDevices() {
   return <PreviewDevice>[
     for (final info in _infos())
@@ -140,7 +140,7 @@ List<PreviewDevice> previewDevices() {
   ];
 }
 
-/// Устройство по умолчанию: самый новый из привычных iPhone.
+/// The default device: the newest common iPhone.
 String defaultDeviceId() {
   final devices = previewDevices();
   for (final name in <String>['iPhone 17', 'iPhone 16', 'iPhone 13']) {
@@ -151,7 +151,7 @@ String defaultDeviceId() {
   return devices.first.id;
 }
 
-/// [screen] в рамке устройства; рамка вписывается в доступное место.
+/// [screen] in a device frame; the frame fits the available space.
 Widget deviceFrame({
   required String deviceId,
   required bool isLandscape,

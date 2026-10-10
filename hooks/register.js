@@ -1,10 +1,11 @@
-// Мод ui-variants: окно-пикер вариантов UI для Flutter-проектов на macOS.
+// ui-variants mod: a live picker window for UI variants in Flutter projects on macOS.
 //
-// Пока скилл ui-variants не загружен в сессии, мод ничего не делает. Загрузка
-// скилла создаёт временное приложение-пикер в ~/Library/Caches/ui-variants,
-// после хода Claude с новыми вариантами мод открывает окно (или делает hot
-// restart), а выбор из окна отправляет следующим сообщением в сессию. После
-// выбора и с концом сессии окно закрывается.
+// Until the ui-variants skill is loaded in a session, the mod does nothing.
+// Loading the skill creates a temporary picker app in ~/Library/Caches/ui-variants;
+// after a Claude turn that writes variants, the mod opens the window (or hot
+// restarts it), and sends the choice, notes and revisions from the window back
+// into the session as the next message. The window closes after a choice and
+// when the session ends.
 
 import {
   choicePrompt,
@@ -39,23 +40,23 @@ const ALIVE_TTL_MS = 24 * 60 * 60 * 1000
 const CLOSE_AFTER_CHOICE_MS = 2500
 const LONG_MS = 300000
 
-const NOT_FLUTTER = 'Это не Flutter-проект, окно-пикер здесь не работает. Опиши варианты текстом.'
+const NOT_FLUTTER = 'This is not a Flutter project, so the picker window is not available here. Describe the variants in text.'
 
-// Файлы временного приложения, которые при обновлении шаблонов не трогаются.
+// Temporary app files that template updates never overwrite.
 const PROTECTED = /^lib\/(registry\.dart|theme\.dart|variants\/)/
 
-// Рамки устройств: пакет device_frame (диапазон версий — чтобы pub подобрал
-// совместимую с зависимостями проекта) или встроенные, если не подошла ни одна.
+// Device frames: the device_frame package (a version range, so pub can pick one
+// compatible with the project's dependencies) or built-in frames if none fits.
 const DEVICE_FRAME_DEPENDENCY = "  device_frame: '>=1.2.0 <2.0.0'"
 const FRAMES_TEMPLATES = { device_frame: 'lib/_host/frames.dart', builtin: 'fallback/frames.dart' }
 
-// Запуск flutter run в фоне, отдельно от процесса Claude Code: окно переживает
-// перезагрузку мода, а закрывает его сам мод (конец сессии, close, clean).
-// Печатает PID запущенного процесса.
+// Starts flutter run in the background, detached from the Claude Code process:
+// the window survives a mod reload, and the mod itself closes it (session end,
+// close, clean). Prints the PID of the started process.
 const LAUNCH_SCRIPT = [
   'mkdir -p "$UIV_STATE"',
   'rm -f "$UIV_STATE/flutter.pid"',
-  // Окно, пережившее свой flutter run, обновить нельзя: закрываем его.
+  // A window that outlived its flutter run cannot be refreshed: close it.
   'pkill -f "$UIV_APP_BUNDLE" 2>/dev/null',
   'nohup /usr/bin/perl -MPOSIX -e \'POSIX::setsid(); exec @ARGV or die "exec: $!"\' ' +
     '"$UIV_FLUTTER" run -d macos --pid-file "$UIV_STATE/flutter.pid" ' +
@@ -65,10 +66,10 @@ const LAUNCH_SCRIPT = [
   'echo $!',
 ].join('\n')
 
-// Закрытие окна одной быстрой командой (у session.end около 1,5 с на всё).
-// Сигнал получает только flutter run этого проекта: в его команде есть путь
-// к .state, поэтому чужой flutter run и PID, доставшийся другому процессу,
-// не пострадают. Печатает 1, если что-то было запущено.
+// Closes the window with one quick command (session.end has about 1.5 s in all).
+// Only this project's flutter run gets the signal: its command line contains the
+// .state path, so another flutter run, or a PID reused by another process, is
+// left alone. Prints 1 if anything was running.
 const STOP_SCRIPT = [
   'found=0',
   'for p in $UIV_PIDS; do',
@@ -80,8 +81,8 @@ const STOP_SCRIPT = [
   'echo $found',
 ].join('\n')
 
-// Состояние модуля. После перезагрузки мода оно пустое и восстанавливается
-// из $.store в session.start.
+// Module state. It is empty after a mod reload and is restored from $.store in
+// session.start.
 let active = null
 let watchTimer = null
 let closeTimer = null
@@ -96,7 +97,7 @@ let ownerBeatAt = 0
 let lastFingerprint = ''
 let version = undefined
 
-// Ключи $.store: все включают путь проекта.
+// $.store keys: every key includes the project path.
 function activeKey(root, sessionId) {
   return `active|${root}|${sessionId}`
 }
@@ -153,18 +154,18 @@ function startWatch($) {
   if (watchTimer === null) watchTimer = $.clock.every(TICK_MS, () => void tick($))
 }
 
-/** Пути временного приложения проекта. */
+/** Paths of the project's temporary app. */
 function hostPaths(root, pkg, home) {
   const appDir = `${home}/Library/Caches/ui-variants/${pkg}-${shortHash(root)}`
   return { appDir, stateDir: `${appDir}/.state` }
 }
 
-/** Собранное приложение-пикер проекта (по этому пути находится его процесс). */
+/** The project's built picker app (its process is found by this path). */
 function appBundle(ctx) {
   return `${ctx.appDir}/build/macos/Build/Products/Debug/ui_variants_host.app`
 }
 
-/** Текст скилла с подставленными путями. */
+/** The skill text with the paths filled in. */
 function fillSkill(text, ctx) {
   return fillPlaceholders(text, {
     VARIANTS_DIR: `${ctx.appDir}/lib/variants`,
@@ -177,11 +178,11 @@ function fillSkill(text, ctx) {
 }
 
 function unavailableSkill(text, ctx, reason) {
-  return `${fillSkill(text, ctx)}\n\nВАЖНО: окно-пикер сейчас недоступно (${reason}). ` +
-    'В этот раз опиши варианты текстом в ответе, указания про временное приложение не выполняй.'
+  return `${fillSkill(text, ctx)}\n\nIMPORTANT: the picker window is not available right now (${reason}). ` +
+    'This time describe the variants in text in your reply and skip the instructions about the temporary app.'
 }
 
-/** Записывает ли вызов инструмента файлы вариантов, реестра или темы. */
+/** Whether a tool call writes the variant, registry or theme files. */
 function touchesHost(e, appDir) {
   const lib = `${appDir}/lib/`
   const watched = path =>
@@ -198,8 +199,8 @@ async function collectStamps($, dir, prefix, parts) {
 }
 
 /**
- * Отпечаток файлов пикера, которые пишет Claude: реестр, тема и варианты.
- * Ловит запись любым способом (Bash, субагент), а не только Write и Edit.
+ * A fingerprint of the picker files Claude writes: registry, theme and variants.
+ * Catches writes made any way (Bash, a subagent), not only Write and Edit.
  */
 async function hostFingerprint($, ctx) {
   const lib = `${ctx.appDir}/lib`
@@ -237,7 +238,7 @@ async function isAlive($, pid) {
   return probe.exitCode === 0
 }
 
-/** PID процесса flutter run окна этого проекта, если он жив. */
+/** The PID of this project's flutter run, if it is alive. */
 async function windowPid($, ctx) {
   const saved = await $.store.get(windowKey(ctx.root))
   let pid = saved !== null && typeof saved === 'object' ? saved.pid : undefined
@@ -246,8 +247,8 @@ async function windowPid($, ctx) {
     pid = Number.parseInt((await $.fs.read(pidPath)).trim(), 10)
   }
   if (!(await isAlive($, pid))) return undefined
-  // PID мог достаться другому процессу: проверяем, что это flutter run этого
-  // проекта (в его команде есть путь к .state).
+  // The PID may have been reused: check that it is this project's flutter run
+  // (its command line contains the .state path).
   const ps = await $.process.run(['ps', '-p', String(pid), '-o', 'command='])
   return ps.stdout.includes(ctx.stateDir) ? pid : undefined
 }
@@ -266,7 +267,7 @@ async function logSize($, ctx) {
   return (await $.fs.stat(path)).size
 }
 
-// ---------- Flutter и временное приложение ----------
+// ---------- Flutter and the temporary app ----------
 
 async function findFlutter($, root, home) {
   const pinned = `${root}/.fvm/flutter_sdk/bin/flutter`
@@ -356,7 +357,7 @@ async function disableSandbox($, ctx) {
   }
 }
 
-/** Создаёт или обновляет временное приложение; возвращает причину сбоя или undefined. */
+/** Creates or updates the temporary app; returns the failure reason or undefined. */
 async function prepareHost($, ctx, projectPubspec) {
   const current = await pluginVersion($)
   const saved = await $.store.get(hostKey(ctx.root))
@@ -373,7 +374,7 @@ async function prepareHost($, ctx, projectPubspec) {
       return `flutter create: ${flutterError(created.stdout + created.stderr) ?? lastLine(created.stderr || created.stdout)}`
     }
     hostSdk = pubspecSdk(await $.fs.read(`${ctx.appDir}/pubspec.yaml`))
-    // Лишнее из шаблона flutter create: тест на MyApp и файлы IDE.
+    // Leftovers of the flutter create template: the MyApp test and IDE files.
     await $.process.run(['rm', '-rf', 'test', '.idea', 'ui_variants_host.iml', 'README.md'], { cwd: ctx.appDir })
   }
   const hasHost = await $.fs.exists(`${ctx.appDir}/lib/_host/version.dart`)
@@ -389,9 +390,9 @@ async function prepareHost($, ctx, projectPubspec) {
     await writeHostPubspec($, ctx, projectPubspec, hostSdk, current, 'device_frame')
     let pub = await pubGet($, ctx)
     if (pub.exitCode !== 0) {
-      // device_frame не совместим с зависимостями проекта: встроенные рамки.
+      // device_frame is incompatible with the project's dependencies: built-in frames.
       const reason = flutterError(`${pub.stdout}\n${pub.stderr}`) ?? lastLine(pub.stderr || pub.stdout)
-      await logError($, ctx, `device_frame не подошёл, встроенные рамки: ${reason}`)
+      await logError($, ctx, `device_frame does not fit, using built-in frames: ${reason}`)
       await writeHostPubspec($, ctx, projectPubspec, hostSdk, current, 'builtin')
       pub = await pubGet($, ctx)
     }
@@ -406,7 +407,7 @@ async function prepareHost($, ctx, projectPubspec) {
   return undefined
 }
 
-// ---------- Активация ----------
+// ---------- Activation ----------
 
 async function readDecision($, ctx) {
   const path = `${ctx.stateDir}/decision.json`
@@ -446,8 +447,8 @@ async function activate($, ctx) {
   await markAlive($, ctx, now)
   const previous = await $.store.get(seenKey(ctx.root, ctx.sessionId))
   if (!isSameProject || previous === undefined) {
-    // Решение, лежавшее в файле до загрузки скилла, ход не запускает: выбор
-    // принимается, только пока сессия следит за окном.
+    // A decision already in the file before the skill loaded never starts a
+    // turn: choices are accepted only while the session watches the window.
     const decision = await readDecision($, ctx)
     seen = { choice: choiceSignature(decision), notes: notesSignature(decision) }
     if (decision !== undefined && decision.requests.length > 0) {
@@ -509,23 +510,23 @@ async function answerSkill($, text) {
   const pkg = pubspecName(pubspec)
   if (!isFlutterPubspec(pubspec) || pkg === undefined) return NOT_FLUTTER
   const home = await $.env.get('HOME')
-  if (home === undefined || home === '') throw new Error('не задана переменная HOME')
+  if (home === undefined || home === '') throw new Error('HOME is not set')
   const sessionId = await $.session.id()
   const ctx = { root, sessionId, pkg, flutter: '', ...hostPaths(root, pkg, home) }
 
   if (command === 'close') {
-    return (await closeWindow($, ctx)) ? 'Окно-пикер закрыто.' : 'Окно-пикер не было открыто.'
+    return (await closeWindow($, ctx)) ? 'The picker window is closed.' : 'The picker window was not open.'
   }
   if (command === 'clean') {
     await closeWindow($, ctx)
     await deactivate($, ctx)
     await $.process.run(['rm', '-rf', ctx.appDir])
     await $.store.delete(hostKey(root))
-    return 'Окно-пикер закрыто, временное приложение удалено.'
+    return 'The picker window is closed and the temporary app is deleted.'
   }
 
   const flutter = await findFlutter($, root, home)
-  if (flutter === undefined) return unavailableSkill(text, ctx, 'не найдена команда flutter')
+  if (flutter === undefined) return unavailableSkill(text, ctx, 'the flutter command was not found')
   ctx.flutter = flutter
   const failure = await prepareHost($, ctx, pubspec)
   if (failure !== undefined) {
@@ -536,9 +537,9 @@ async function answerSkill($, text) {
   return fillSkill(text, ctx)
 }
 
-// ---------- Окно ----------
+// ---------- Window ----------
 
-/** Закрывает окно проекта и его flutter run; возвращает, было ли что закрывать. */
+/** Closes the project's window and its flutter run; returns whether anything was open. */
 async function closeWindow($, ctx) {
   const pids = new Set()
   const saved = await $.store.get(windowKey(ctx.root))
@@ -550,7 +551,7 @@ async function closeWindow($, ctx) {
   const pidPath = `${ctx.stateDir}/flutter.pid`
   if (await $.fs.exists(pidPath)) pids.add(Number.parseInt((await $.fs.read(pidPath)).trim(), 10))
   const list = [...pids].filter(pid => Number.isInteger(pid) && pid > 0)
-  // Приложение закрывается и тогда, когда пережило свой flutter run.
+  // The app is closed even when it outlived its flutter run.
   const stopped = await $.process.run(['/bin/sh', '-c', STOP_SCRIPT], {
     env: { UIV_PIDS: list.join(' '), UIV_STATE: ctx.stateDir, UIV_APP_BUNDLE: appBundle(ctx) },
     timeoutMs: 5000,
@@ -564,7 +565,7 @@ async function closeWindow($, ctx) {
   return lastLine(stopped.stdout) === '1'
 }
 
-/** Следит ли за проектом другая живая сессия (её метка свежее OWNER_STALE_MS). */
+/** Whether another live session watches the project (its mark is newer than OWNER_STALE_MS). */
 async function hasOtherWatchers($, ctx, now) {
   const prefix = `alive|${ctx.root}|`
   const mine = aliveKey(ctx.root, ctx.sessionId)
@@ -591,11 +592,11 @@ async function launchWindow($, ctx) {
     if (piece.stream === 'stdout') output += piece.text
   }
   const pid = Number.parseInt(lastLine(output), 10)
-  if (!Number.isInteger(pid) || pid <= 0) throw new Error(`flutter run не запустился: ${lastLine(output) || 'нет PID'}`)
+  if (!Number.isInteger(pid) || pid <= 0) throw new Error(`flutter run did not start: ${lastLine(output) || 'no PID'}`)
   const now = await $.clock.now()
   launching = { pid, startedAt: now }
   await $.store.set(windowKey(ctx.root), { launcherPid: pid, startedAt: now })
-  $.ui.toast('Окно с вариантами открывается…')
+  $.ui.toast('Opening the variants window…')
 }
 
 async function hotRestart($, ctx, pid, isAnnounced) {
@@ -603,11 +604,11 @@ async function hotRestart($, ctx, pid, isAnnounced) {
   const sent = await $.process.run(['kill', '-USR2', String(pid)])
   if (sent.exitCode !== 0) return false
   restartCheck = { offset, at: await $.clock.now() }
-  if (isAnnounced) $.ui.toast('Окно с вариантами обновлено')
+  if (isAnnounced) $.ui.toast('Variants window updated')
   return true
 }
 
-/** Открывает окно или обновляет его горячим перезапуском. */
+/** Opens the window or refreshes it with a hot restart. */
 async function refreshWindow($) {
   const ctx = active
   if (ctx === null) return
@@ -615,24 +616,25 @@ async function refreshWindow($) {
     const pid = await windowPid($, ctx)
     if (pid !== undefined && (await hotRestart($, ctx, pid, true))) return
     if (launching !== null && (await isAlive($, launching.pid))) {
-      // Окно ещё собирается: обновим его, как только оно откроется.
+      // The window is still building: refresh it as soon as it opens.
       pendingRestart = true
       return
     }
     await launchWindow($, ctx)
     startWatch($)
   } catch (error) {
-    $.ui.toast(`Окно с вариантами не открылось: ${message(error)}`, { timeoutMs: 10000 })
-    await logError($, ctx, `запуск окна: ${message(error)}`)
+    $.ui.toast(`The variants window did not open: ${message(error)}`, { timeoutMs: 10000 })
+    await logError($, ctx, `window launch: ${message(error)}`)
   }
 }
 
-// ---------- Наблюдение ----------
+// ---------- Watching ----------
 
 /**
- * Метка жизни сессии: в $.store (по ней другие сессии решают, закрывать ли
- * окно) и в .state/heartbeat.json (без неё дольше минуты окно закрывается само,
- * если сессия упала, не дойдя до session.end).
+ * The session's liveness mark: in $.store (other sessions use it to decide
+ * whether to close the window) and in .state/heartbeat.json (without a fresh one
+ * for over a minute the window closes itself, if the session died before
+ * session.end).
  */
 async function markAlive($, ctx, now) {
   await $.store.set(aliveKey(ctx.root, ctx.sessionId), now)
@@ -659,7 +661,7 @@ async function trackLaunch($, ctx) {
       const startedAt = launching.startedAt
       launching = null
       await $.store.set(windowKey(ctx.root), { pid, startedAt })
-      $.ui.toast('Окно с вариантами открыто')
+      $.ui.toast('Variants window is open')
       if (pendingRestart) {
         pendingRestart = false
         await hotRestart($, ctx, pid, false)
@@ -672,9 +674,9 @@ async function trackLaunch($, ctx) {
   pendingRestart = false
   await $.store.delete(windowKey(ctx.root))
   const log = await logTail($, ctx)
-  const reason = flutterError(log) ?? (lastLine(log) || 'flutter run завершился')
-  $.ui.toast(`Окно с вариантами не открылось: ${reason}`, { timeoutMs: 10000 })
-  await logError($, ctx, `flutter run: ${reason} (полный вывод: ${ctx.stateDir}/flutter.log)`)
+  const reason = flutterError(log) ?? (lastLine(log) || 'flutter run exited')
+  $.ui.toast(`The variants window did not open: ${reason}`, { timeoutMs: 10000 })
+  await logError($, ctx, `flutter run: ${reason} (full output: ${ctx.stateDir}/flutter.log)`)
 }
 
 async function checkRestart($, ctx) {
@@ -685,7 +687,7 @@ async function checkRestart($, ctx) {
   const error = flutterError(log)
   if (error !== undefined) {
     restartCheck = null
-    $.ui.toast(`Ошибка в вариантах: ${error}`, { timeoutMs: 10000 })
+    $.ui.toast(`Variants error: ${error}`, { timeoutMs: 10000 })
     await logError($, ctx, `hot restart: ${error}`)
     return
   }
@@ -694,14 +696,14 @@ async function checkRestart($, ctx) {
   }
 }
 
-/** Ответ окну: выбор отправлен или уже отправлялся. */
+/** The answer to the window: the choice was sent, or was sent before. */
 async function writeAck($, ctx, decision, status) {
   const at = new Date(await $.clock.now()).toISOString()
   const ack = { round: decision.round, chosen: decision.chosen, chosenAt: decision.chosenAt, status, at }
   await $.fs.write(`${ctx.stateDir}/ack.json`, JSON.stringify(ack))
 }
 
-/** Эта сессия отвечает за проект: отправляет выбор и правки. */
+/** This session owns the project: it sends choices and revisions. */
 async function isOwner($, ctx) {
   const now = await $.clock.now()
   const owner = await $.store.get(ownerKey(ctx.root))
@@ -715,8 +717,9 @@ async function sentRequests($, ctx) {
 }
 
 /**
- * Правки вариантов из окна: новые уходят Claude одним сообщением сразу, без
- * выбора. Окно узнаёт об отправке из requests-ack.json.
+ * Variant revisions from the window: new ones go to Claude at once, in one
+ * message, without a choice. The window learns they were sent from
+ * requests-ack.json.
  */
 async function submitRevisions($, ctx, decision) {
   if (decision.requests.length === 0) return
@@ -726,32 +729,32 @@ async function submitRevisions($, ctx, decision) {
   const all = [...sent, ...fresh.map(request => request.id)].slice(-200)
   await $.store.set(requestedKey(ctx.root), all)
   $.ui.toast(fresh.length === 1
-    ? `Правка отправлена Claude: ${noteLine(fresh[0], 80)}`
-    : `Правки отправлены Claude: ${fresh.length}`)
+    ? `Revision sent to Claude: ${noteLine(fresh[0], 80)}`
+    : `Revisions sent to Claude: ${fresh.length}`)
   const text = revisionPrompt(fresh, `${ctx.appDir}/lib/variants`)
-  $.prompt.submit({ text }).catch(error => void logError($, ctx, `отправка правки: ${message(error)}`))
+  $.prompt.submit({ text }).catch(error => void logError($, ctx, `sending a revision: ${message(error)}`))
   const ids = decision.requests.map(request => request.id).filter(id => all.includes(id))
   await $.fs.write(`${ctx.stateDir}/requests-ack.json`, JSON.stringify({ sent: ids }))
 }
 
 async function submitChoice($, ctx, decision) {
   if (!(await isOwner($, ctx))) return
-  // За проектом могут следить несколько сессий, а «Выбрать» могут нажать
-  // повторно: один и тот же выбор отправляется один раз.
+  // Several sessions may watch the project and Choose may be pressed again:
+  // the same choice is sent once.
   const signature = sendSignature(decision)
   if ((await $.store.get(submittedKey(ctx.root))) === signature) {
-    $.ui.toast('Этот выбор уже отправлен')
+    $.ui.toast('This choice was already sent')
     await writeAck($, ctx, decision, 'duplicate')
   } else {
     await $.store.set(submittedKey(ctx.root), signature)
     const many = decisionChoices(decision).length > 1
-    $.ui.toast(`${many ? 'Выбраны варианты' : 'Выбран вариант'}: ${decision.chosenTitle || decision.chosen}`)
+    $.ui.toast(`${many ? 'Chosen variants' : 'Chosen variant'}: ${decision.chosenTitle || decision.chosen}`)
     const text = choicePrompt(decision, `${ctx.stateDir}/decision.json`)
-    $.prompt.submit({ text }).catch(error => void logError($, ctx, `отправка выбора: ${message(error)}`))
+    $.prompt.submit({ text }).catch(error => void logError($, ctx, `sending the choice: ${message(error)}`))
     await writeAck($, ctx, decision, 'sent')
   }
-  // Выбор сделан: окну незачем висеть. Пауза — чтобы окно успело показать,
-  // что Claude получил выбор. Новые варианты снова откроют окно.
+  // The choice is made, so the window has no reason to stay. The pause lets it
+  // show that Claude got the choice. New variants open the window again.
   if (closeTimer !== null) closeTimer.cancel()
   closeTimer = $.clock.after(CLOSE_AFTER_CHOICE_MS, () => void closeAfterChoice($, ctx))
 }
@@ -762,7 +765,7 @@ async function closeAfterChoice($, ctx) {
   try {
     await closeWindow($, ctx)
   } catch (error) {
-    await logError($, ctx, `закрытие окна после выбора: ${message(error)}`)
+    await logError($, ctx, `closing the window after the choice: ${message(error)}`)
   }
 }
 
@@ -787,7 +790,7 @@ async function checkDecision($, ctx) {
     seen = { choice: seen.choice, notes }
     await $.store.set(seenKey(ctx.root, ctx.sessionId), seen)
     const last = decision.notes[decision.notes.length - 1]
-    if (last !== undefined) $.ui.toast(`Комментарий сохранён: ${noteLine(last, 100)}`)
+    if (last !== undefined) $.ui.toast(`Note saved: ${noteLine(last, 100)}`)
   }
 }
 
@@ -801,19 +804,19 @@ async function tick($) {
     await checkRestart($, ctx)
     await checkDecision($, ctx)
   } catch (error) {
-    await logError($, ctx, `наблюдение: ${message(error)}`).catch(() => undefined)
+    await logError($, ctx, `watching: ${message(error)}`).catch(() => undefined)
   } finally {
     isTicking = false
   }
 }
 
-// ---------- Хуки ----------
+// ---------- Hooks ----------
 
 /** @type {import('claude-code').Register} */
 export const register = on => {
   on('session.start', async ($, e, next) => {
-    // После перезагрузки мода старые таймеры отменяются, активность
-    // восстанавливается, если скилл уже загружали в этой сессии.
+    // After a mod reload the old timers are cancelled and activity is restored
+    // if the skill was already loaded in this session.
     stopWatch()
     resetState()
     const started = await next(e)
@@ -833,11 +836,11 @@ export const register = on => {
         await $.store.delete(ownerKey(ctx.root))
       }
       if (e.reason === 'clear') await $.store.delete(activeKey(ctx.root, ctx.sessionId))
-      // Окно закрывается вместе с сессией (и при /clear), если за проектом не
-      // следит другая живая сессия: тогда окно остаётся ей.
+      // The window closes with the session (and on /clear) unless another live
+      // session watches the project: then the window stays for it.
       if (!(await hasOtherWatchers($, ctx, now))) await closeWindow($, ctx)
     } catch {
-      // Сессия уже завершается: ошибки здесь не важны.
+      // The session is ending anyway: errors here do not matter.
     }
     resetState()
     return next(e)
@@ -850,8 +853,8 @@ export const register = on => {
     } catch (error) {
       $.ui.log(`ui-variants: ${message(error)}`, { to: 'debug' })
       return {
-        text: `${expanded.text}\n\nВАЖНО: окно-пикер сейчас недоступно (${message(error)}). ` +
-          'Опиши варианты текстом в ответе.',
+        text: `${expanded.text}\n\nIMPORTANT: the picker window is not available right now (${message(error)}). ` +
+          'Describe the variants in text in your reply.',
       }
     }
   })
