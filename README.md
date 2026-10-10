@@ -101,8 +101,34 @@ The first time in a project the window takes about a minute to open while the ap
 
 ## Limitations
 
-- macOS only. Project plugins without macOS support do not work in the window.
+- macOS only. On Linux and Windows the skill tells Claude to describe the variants in text instead. See [Porting to Linux or Windows](#porting-to-linux-or-windows).
+- Project plugins without macOS support do not work in the window.
 - The window does not open in `claude -p`: the process exits before the mod can start it.
+
+## Porting to Linux or Windows
+
+The mod runs only on macOS, and the macOS check is `isMacos` in `hooks/register.js`. If you need the mod on another OS, fork the repository: the code is MIT-licensed. The picker itself (`templates/lib/`) is plain Flutter and does not depend on the OS. What ties the mod to macOS is how it creates, starts, refreshes and closes the window:
+
+| What | Where | macOS now | Linux | Windows |
+|---|---|---|---|---|
+| OS check | `isMacos` | `uname -s` is `Darwin` | accept `Linux` | `OS` is `Windows_NT` |
+| Temporary app folder | `hostPaths` | `~/Library/Caches/ui-variants` | `$XDG_CACHE_HOME/ui-variants` or `~/.cache/ui-variants` | `%LOCALAPPDATA%\ui-variants`; `HOME` is usually not set |
+| App creation | `prepareHost`, `disableSandbox` | `flutter create --platforms=macos`, sandbox off in the entitlements | `--platforms=linux` | `--platforms=windows` |
+| Window title, raising the window | `templates/macos/Runner/MainFlutterWindow.swift.tmpl`, `lib/_host/window.dart` | Swift and the `ui_variants/window` channel | `linux/runner/my_application.cc` | `windows/runner/main.cpp` |
+| Built app, found by its path to close it | `appBundle` | `build/macos/Build/Products/Debug/ui_variants_host.app` | `build/linux/<arch>/debug/bundle/ui_variants_host` | `build\windows\x64\runner\Debug\ui_variants_host.exe` |
+| Detached launch | `LAUNCH_SCRIPT` | `sh`, `nohup`, `perl` with `setsid`, `flutter run -d macos` | `-d linux`; `setsid` from util-linux if `perl` is missing | no `sh` or `perl` |
+| Hot restart | `hotRestart` | `kill -USR2` to `flutter run` | the same | no signals |
+| Closing the window | `STOP_SCRIPT`, `isAlive`, `windowPid` | `ps`, `kill`, `pkill` | the same | `tasklist`, `taskkill` |
+| Reading the `flutter run` log | `logTail` | `tail -c` | the same | read it with `$.fs` |
+| Deleting files | `prepareHost`, `clean` in `answerSkill` | `rm -rf` | the same | no `rm` |
+| Finding Flutter | `findFlutter`, `searchFlutter` | `which`, the login shell, Homebrew paths | add the snap path | `where flutter`, `flutter.bat` |
+| Toolchain | | Xcode | clang, cmake, ninja-build, pkg-config, libgtk-3-dev | Visual Studio with "Desktop development with C++" |
+
+**Linux** is the short way: the Unix commands and SIGUSR2 behave as on macOS. The mod sends the signal by name, so its different number on Linux does not matter.
+
+**Windows** is harder because of hot restart. `flutter run` takes no signals there, and `$.process.spawn` writes to a process's stdin only once, so the mod cannot drive `flutter run --machine` and its `app.restart` command by itself. One way out is a small launcher in Dart, which ships with Flutter: it starts `flutter run --machine`, watches request files in `.state/` and sends `app.restart` or `app.stop`. Also check that `flutter.bat` starts through `$.process.run`, which runs commands without a shell, and that the window outlives the Claude Code process.
+
+`tests/register.test.ts` stubs every command the mod runs, so update the stubs together with the code.
 
 ## Development
 

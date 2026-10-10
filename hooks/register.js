@@ -41,6 +41,7 @@ const CLOSE_AFTER_CHOICE_MS = 2500
 const LONG_MS = 300000
 
 const NOT_FLUTTER = 'This is not a Flutter project, so the picker window is not available here. Describe the variants in text.'
+const MACOS_ONLY = 'The picker window works only on macOS, so it is not available here. Describe the variants in text.'
 
 // Temporary app files that template updates never overwrite.
 const PROTECTED = /^lib\/(registry\.dart|theme\.dart|variants\/)/
@@ -502,6 +503,13 @@ async function restore($) {
   startWatch($)
 }
 
+/** Whether Claude Code runs on macOS: Windows always sets OS=Windows_NT, uname tells macOS from Linux. */
+async function isMacos($) {
+  if ((await $.env.get('OS')) === 'Windows_NT') return false
+  const uname = await $.process.run(['uname', '-s']).catch(() => undefined)
+  return uname !== undefined && uname.stdout.trim() === 'Darwin'
+}
+
 async function answerSkill($, text) {
   const command = parseArgs(text).toLowerCase()
   const root = await $.session.root()
@@ -509,6 +517,7 @@ async function answerSkill($, text) {
   const pubspec = (await $.fs.exists(pubspecPath)) ? await $.fs.read(pubspecPath) : ''
   const pkg = pubspecName(pubspec)
   if (!isFlutterPubspec(pubspec) || pkg === undefined) return NOT_FLUTTER
+  if (!(await isMacos($))) return MACOS_ONLY
   const home = await $.env.get('HOME')
   if (home === undefined || home === '') throw new Error('HOME is not set')
   const sessionId = await $.session.id()

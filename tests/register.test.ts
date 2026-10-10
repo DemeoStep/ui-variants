@@ -83,7 +83,14 @@ function listTemplates(rel: string) {
   return [...names].map(([name, kind]) => ({ name, kind, size: 0, mtimeMs: 0, isLink: false }))
 }
 
-function setup(on: On, options: { pubspec?: string; store?: Record<string, unknown> } = {}): World {
+type SetupOptions = {
+  pubspec?: string
+  store?: Record<string, unknown>
+  env?: Record<string, string>
+  uname?: string
+}
+
+function setup(on: On, options: SetupOptions = {}): World {
   let stamp = 1000
   const world: World = {
     files: new Map(),
@@ -110,7 +117,7 @@ function setup(on: On, options: { pubspec?: string; store?: Record<string, unkno
   }
   if (options.pubspec !== undefined) world.write(`${PROJECT}/pubspec.yaml`, options.pubspec)
 
-  mock.env(on, { HOME, SHELL: '/bin/zsh' })
+  mock.env(on, options.env ?? { HOME, SHELL: '/bin/zsh' })
   mock.store(on, options.store)
   on('session.root', () => ({ value: PROJECT }))
   on('session.id', () => ({ value: 'session-1' }))
@@ -158,6 +165,7 @@ function setup(on: On, options: { pubspec?: string; store?: Record<string, unkno
     world.runs.push({ argv, cwd })
     const ok = (stdout = '') => ({ value: { exitCode: 0, stdout, stderr: '' } })
     const fail = (stderr = '') => ({ value: { exitCode: 1, stdout: '', stderr } })
+    if (argv[0] === 'uname') return ok(`${options.uname ?? 'Darwin'}\n`)
     if (argv[0] === '/usr/bin/which') return ok(`${FLUTTER}\n`)
     if (argv[0] === FLUTTER && argv[1] === 'create') {
       const dir = argv[argv.length - 1]
@@ -281,6 +289,24 @@ test('without pubspec.yaml the skill refuses too', async ($, on) => {
   const answer = await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
   expect(answer.text).toMatch(/^This is not a Flutter project/)
   expect(world.writes).toEqual([])
+})
+
+test('on Linux the skill says the window is macOS only', async ($, on) => {
+  const linux = setup(on, { pubspec: FLUTTER_PUBSPEC, uname: 'Linux' })
+  mock.clock(on)
+  const answer = await $.skill.prompt({ skill: 'ui-variants', text: SKILL_TEXT })
+  expect(answer.text).toBe('The picker window works only on macOS, so it is not available here. Describe the variants in text.')
+  expect(linux.writes).toEqual([])
+  expect(linux.runs.map(run => run.argv)).toEqual([['uname', '-s']])
+})
+
+test('on Windows the check needs neither HOME nor uname', async ($, on) => {
+  const windows = setup(on, { pubspec: FLUTTER_PUBSPEC, env: { OS: 'Windows_NT' } })
+  mock.clock(on)
+  const answer = await $.skill.prompt({ skill: 'ui-variants', text: 'Show variants for: close' })
+  expect(answer.text).toMatch(/^The picker window works only on macOS/)
+  expect(windows.writes).toEqual([])
+  expect(windows.runs).toEqual([])
 })
 
 test('loading the skill creates the picker app and fills in the paths', async ($, on) => {
